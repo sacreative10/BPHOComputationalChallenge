@@ -35,7 +35,7 @@ void controlPanel(float &timestep, float &launchSpeed, float &strengthOfGravity,
   ImGui::End();
 }
 
-void challenge1(sf::RenderWindow &window) {
+void challenge1(sf::RenderTarget &window) {
   static float timestep = 0.01;
   static float launchSpeed = 20.f;
   static float strengthOfGravity = 9.81;
@@ -114,7 +114,7 @@ void controlPanel2(float &launchSpeed, float &strengthOfGravity,
 
   ImGui::End();
 }
-void challenge2(sf::RenderWindow &window) {
+void challenge2(sf::RenderTarget &window) {
   static float launchSpeed = 20.f;
   static float strengthOfGravity = 9.81;
   static float launchHeight = 2;
@@ -208,6 +208,8 @@ int main() {
   window.setFramerateLimit(60);
   ImGui::SFML::Init(window);
 
+  auto &io = ImGui::GetIO();
+  io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
   int currentChallenge = 0;
 
   sf::Clock deltaClock;
@@ -226,9 +228,23 @@ int main() {
     }
 
     ImGui::SFML::Update(window, deltaClock.restart());
-    window.clear();
 
-    drawGrid(window);
+    ImVec2 viewportSize = ImGui::GetMainViewport()->Size;
+    sf::RenderTexture renderTexture;
+    renderTexture.create(viewportSize.x, viewportSize.y);
+
+    renderTexture.clear();
+
+    switch (currentChallenge) {
+      case 1:
+        challenge1(renderTexture);
+        break;
+      case 2:
+        challenge2(renderTexture);
+        break;
+    }
+
+    ImGui::DockSpaceOverViewport();
 
     ImGui::Begin("Challenge Choice Window");
     ImGui::Text("Choose a challenge to simulate");
@@ -244,17 +260,15 @@ int main() {
     }
     ImGui::End();
 
-    switch (currentChallenge) {
-      case 1:
-        challenge1(window);
-        break;
-      case 2:
-        challenge2(window);
-        break;
+    if (ImGui::Begin("Viewport")) {
+      viewportSize = ImGui::GetWindowSize();
+      ImGui::Image(renderTexture);
     }
+    ImGui::End();
 
+    window.clear();
     ImGui::SFML::Render(window);
-
+    drawGrid(window);
     window.display();
   }
 

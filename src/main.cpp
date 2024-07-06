@@ -135,15 +135,12 @@ void challenge2(sf::RenderWindow &window) {
            std::sqrt(std::sin(launchAngle_rad) * std::sin(launchAngle_rad) +
                      2.f * strengthOfGravity * launchHeight /
                          (launchSpeed * launchSpeed)));
-  float fraction_range = 1.f / numPoints;
-  for (int i = 0; i < numPoints; i++) {
-    float x = X_AXIS_OFFSET + scale * range * i * fraction_range;
-    float y =
-        X_AXIS_OFFSET + scale * launchHeight + x * std::tan(launchAngle_rad) -
-        strengthOfGravity / (2 * launchSpeed * launchSpeed) *
-            (1 + std::tan(launchAngle_rad) * std::tan(launchAngle_rad)) * x * x;
+  float fraction_range = 1.f/numPoints;
+  for(int i = 0; i < numPoints; i++){
+    float x = (scale * range * i * fraction_range);
+    float y = scale * launchHeight + x * std::tan(launchAngle_rad)- strengthOfGravity/(2*launchSpeed * launchSpeed) * (1+ std::tan(launchAngle_rad)*std::tan(launchAngle_rad)) * x * x;
 
-    points.push_back({x, y});
+    points.push_back({x + X_AXIS_OFFSET, y + Y_AXIS_OFFSET});
   }
   for (point p : points) {
     sf::CircleShape ball(2.f);
@@ -153,19 +150,13 @@ void challenge2(sf::RenderWindow &window) {
   }
   // apogee calculations
 
-  float xa = scale * (((launchSpeed * launchSpeed) / strengthOfGravity) *
-                      (std::sin(launchAngle_rad) * std::cos(launchAngle_rad)));
-  float ya =
-      Y_AXIS_OFFSET +
-      scale * (launchHeight +
-               ((launchSpeed * launchSpeed) / (2 * strengthOfGravity)) *
-                   (std::sin(launchAngle_rad) * std::sin(launchAngle_rad)));
+  float xa =  (scale * (((launchSpeed * launchSpeed) / strengthOfGravity) * (std::sin(launchAngle_rad) * std::cos(launchAngle_rad)))) + X_AXIS_OFFSET;
+  float ya = Y_AXIS_OFFSET + (scale * (launchHeight + ((launchSpeed * launchSpeed) / (2 * strengthOfGravity)) * (std::sin(launchAngle_rad) * std::sin(launchAngle_rad))));
   sf::CircleShape ball(5.f);
   ball.setOrigin(5.f, 5.f);
   ball.setFillColor(sf::Color::Blue);
   ball.setPosition(xa, 720 - ya);
-  window.draw(ball);
-}
+  window.draw(ball);}
 
 int RENDER_WIDTH = 1280;
 int RENDER_HEIGHT = 720;

@@ -268,7 +268,53 @@ void challenge3(sf::RenderWindow &window, int& targetX, int& targetY) {
   window.draw(ball);
 }
 
-int RENDER_WIDTH = 1280;
+
+void controlPanel4(float* launchSpeed, float* launchHeight, float* strengthOfGravity, int* launchAngle, float bestlaunchAngle = 0, float currentRange = 0, float maxRange = 0)
+{
+  ImGui::Begin("Challenge 4 Controls");
+  ImGui::SliderFloat("Strength of Gravity", strengthOfGravity, 0.1, 10);
+
+  ImGui::Text("Projectile Settings");
+  ImGui::SliderInt("Launch Angle", launchAngle, 0, 90);
+  ImGui::SliderFloat("Launch Speed", launchSpeed, 0, 500);
+  ImGui::SliderFloat("Launch Height", launchHeight, 0, 500);
+
+  ImGui::Text("Current Range: %f", currentRange);
+  ImGui::Text("Best Launch Angle: %f", bestlaunchAngle);
+  ImGui::Text("Best Range: %f", maxRange);
+  ImGui::End();
+}
+
+void challenge4(sf::RenderWindow& window)
+{
+  static float launchSpeed = 20.f;
+  static float strengthOfGravity = 9.81;
+  static float launchHeight = 0;
+  static int launchAngle = 45;
+  static float scale = 1.f;
+  static int numPoints = 100;
+  static float launchAngle_rad = launchAngle * 3.14159f / 180.f;
+
+  // Range calculations
+  float current_Range = (launchSpeed * launchSpeed)/strengthOfGravity * (std::sin(launchAngle_rad) * std::cos(launchAngle_rad) + std::cos(launchAngle_rad) * sqrt(std::sin(launchAngle_rad) * std::sin(launchAngle_rad) +2.f * strengthOfGravity * launchHeight/(launchSpeed * launchSpeed)));
+  float max_theta_rad = std::asin(1.f/(sqrt(2.f+2.f*strengthOfGravity* launchHeight/(launchSpeed*launchSpeed))));
+  float max_theta_deg = max_theta_rad * 180.f/3.14159f;
+  float max_Range = launchSpeed * launchSpeed/strengthOfGravity * sqrt(1.f+2.f * strengthOfGravity * launchHeight/(launchSpeed * launchSpeed));
+
+  float bestLaunchAngle = max_theta_deg;
+
+  controlPanel4(&launchSpeed, &launchHeight, &strengthOfGravity, &launchAngle, bestLaunchAngle, current_Range, max_Range);
+
+  std::vector<point> userParabola = cartesianProjectile(launchAngle, strengthOfGravity, launchSpeed, launchHeight, numPoints, scale);
+  std::vector<point> bestParabola = cartesianProjectile(bestLaunchAngle, strengthOfGravity, launchSpeed, launchHeight, numPoints, scale);
+
+  drawPoints(window, userParabola, sf::Color::Green);
+  drawPoints(window, bestParabola, sf::Color::Magenta);
+}
+
+
+
+int RENDER_WIDTH = 1280;  
 int RENDER_HEIGHT = 720;
 void drawGrid(sf::RenderWindow &window) {
   // minor grid lines y axis
@@ -350,10 +396,12 @@ int main() {
       currentChallenge = 2;
     } else if(ImGui::Button("Challenge 3")) {
       currentChallenge = 3;
+    } else if(ImGui::Button("Challenge 4")) {
+      currentChallenge = 4;
     }
     if (currentChallenge != 0) {
       if (ImGui::Button("Reset")) {
-        currentChallenge = 0;
+        currentChallenge = 0;   
       }
     }
     ImGui::End();
@@ -368,6 +416,8 @@ int main() {
       case 3:
         challenge3(window, targetX, targetY);
         break;
+      case 4:
+        challenge4(window);
     }
 
     ImGui::SFML::Render(window);

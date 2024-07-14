@@ -114,6 +114,44 @@ void controlPanel2(float &launchSpeed, float &strengthOfGravity,
 
   ImGui::End();
 }
+
+std::vector<point> cartesianProjectile(float angle_deg, float strengthOfGravity,
+                                       float launchSpeed, float launchHeight,
+                                       int numPoints, float scale) {
+  std::vector<point> points;
+
+  float launchAngle_rad = angle_deg * 3.14159f / 180.f;
+  float range =
+      launchSpeed * launchSpeed / strengthOfGravity *
+      (std::sin(launchAngle_rad) * std::cos(launchAngle_rad) +
+       std::cos(launchAngle_rad) *
+           std::sqrt(std::sin(launchAngle_rad) * std::sin(launchAngle_rad) +
+                     2.f * strengthOfGravity * launchHeight /
+                         (launchSpeed * launchSpeed)));
+  float fraction_range = 1.f / numPoints;
+  for (int i = 0; i < numPoints; i++) {
+    float x = scale * range * i * fraction_range;
+    float y =
+        scale * launchHeight + x * std::tan(launchAngle_rad) -
+        strengthOfGravity / (2 * launchSpeed * launchSpeed) *
+            (1 + std::tan(launchAngle_rad) * std::tan(launchAngle_rad)) * x * x;
+
+    points.push_back({x + X_AXIS_OFFSET, y + Y_AXIS_OFFSET});
+  }
+
+  return points;
+}
+
+void drawPoints(sf::RenderWindow &window, std::vector<point> points,
+                sf::Color color = sf::Color::Green) {
+  for (point p : points) {
+    sf::CircleShape ball(2.f);
+    ball.setFillColor(color);
+    ball.setPosition(p.x, 720 - p.y);
+    window.draw(ball);
+  }
+}
+
 void challenge2(sf::RenderWindow &window) {
   static float launchSpeed = 20.f;
   static float strengthOfGravity = 9.81;
@@ -127,36 +165,108 @@ void challenge2(sf::RenderWindow &window) {
 
   std::vector<point> points;
 
-  float launchAngle_rad = launchAngle * 3.14159f / 180.f;
-  float range =
-      launchSpeed * launchSpeed / strengthOfGravity *
-      (std::sin(launchAngle_rad) * std::cos(launchAngle_rad) +
-       std::cos(launchAngle_rad) *
-           std::sqrt(std::sin(launchAngle_rad) * std::sin(launchAngle_rad) +
-                     2.f * strengthOfGravity * launchHeight /
-                         (launchSpeed * launchSpeed)));
-  float fraction_range = 1.f/numPoints;
-  for(int i = 0; i < numPoints; i++){
-    float x = (scale * range * i * fraction_range);
-    float y = scale * launchHeight + x * std::tan(launchAngle_rad)- strengthOfGravity/(2*launchSpeed * launchSpeed) * (1+ std::tan(launchAngle_rad)*std::tan(launchAngle_rad)) * x * x;
+  points = cartesianProjectile(launchAngle, strengthOfGravity, launchSpeed,
+                               launchHeight, numPoints, scale);
 
-    points.push_back({x + X_AXIS_OFFSET, y + Y_AXIS_OFFSET});
-  }
-  for (point p : points) {
-    sf::CircleShape ball(2.f);
-    ball.setFillColor(sf::Color::Green);
-    ball.setPosition(p.x, 720 - p.y);
-    window.draw(ball);
-  }
+  drawPoints(window, points);
+
   // apogee calculations
 
-  float xa =  (scale * (((launchSpeed * launchSpeed) / strengthOfGravity) * (std::sin(launchAngle_rad) * std::cos(launchAngle_rad)))) + X_AXIS_OFFSET;
-  float ya = Y_AXIS_OFFSET + (scale * (launchHeight + ((launchSpeed * launchSpeed) / (2 * strengthOfGravity)) * (std::sin(launchAngle_rad) * std::sin(launchAngle_rad))));
+  float launchAngle_rad = launchAngle * 3.14159f / 180.f;
+
+  float xa = scale * (((launchSpeed * launchSpeed) / strengthOfGravity) *
+                      (std::sin(launchAngle_rad) * std::cos(launchAngle_rad)));
+  float ya =
+      scale * (launchHeight +
+               ((launchSpeed * launchSpeed) / (2 * strengthOfGravity)) *
+                   (std::sin(launchAngle_rad) * std::sin(launchAngle_rad)));
   sf::CircleShape ball(5.f);
   ball.setOrigin(5.f, 5.f);
   ball.setFillColor(sf::Color::Blue);
-  ball.setPosition(xa, 720 - ya);
-  window.draw(ball);}
+  ball.setPosition(xa + X_AXIS_OFFSET, 720 - ya - Y_AXIS_OFFSET);
+  window.draw(ball);
+}
+
+bool choosePoint = false;
+
+void controlpanel3(int *targetX, int *targetY, float *strengthOfGravity,
+                   float *launchSpeed, float minSpeed, float * launchHeight) {
+  ImGui::Begin("Challenge 3");
+
+  ImGui::Text("Legend");
+  ImGui::TextColored(ImColor(1.f, 0.f, 1.f, 1.f), "Magenta: Target");
+  ImGui::TextColored(ImVec4(0.f, 0.f, 1.f, 1.f), "Blue: High Ball");
+  ImGui::TextColored(ImVec4(1.f, 0.f, 0.f, 1.f), "Red: Low Ball");
+  ImGui::TextColored(ImColor(0.f, 1.f, 0.f, 1.f), "Green: Minimum Speed");
+
+  ImGui::Text("General Settings");
+  ImGui::InputInt("Target X", targetX, 0, 1000);
+  ImGui::InputInt("Target Y", targetY, 0, 1000);
+  if (ImGui::Button(choosePoint ? "Choosing point using mouse, Left Click to confirm"
+    : "Choose Point using mouse")) {
+    choosePoint = !choosePoint;
+  }
+  ImGui::SliderFloat("Strength of Gravity", strengthOfGravity, 0.1, 10);
+  ImGui::Text("Minimum Launch Speed: %f", minSpeed);
+  ImGui::SliderFloat("Launch Speed", launchSpeed, minSpeed, minSpeed + (minSpeed * 2));
+  ImGui::SliderFloat("Launch Height", launchHeight, 0, 500);
+
+
+  ImGui::End();
+}
+
+void challenge3(sf::RenderWindow &window, int& targetX, int& targetY) {
+  // inputs
+  static float strengthOfGravity = 9.81;
+  static float launchHeight = 0;
+
+  float tempTargetY = targetY - launchHeight;
+  float minimumLaunchSpeed =
+      sqrt(strengthOfGravity) *
+      sqrt(tempTargetY + sqrt(tempTargetY * tempTargetY + targetX * targetX));
+  static float launchSpeed = minimumLaunchSpeed;
+  controlpanel3(&targetX, &targetY, &strengthOfGravity, &launchSpeed,
+                minimumLaunchSpeed, &launchHeight);
+
+  // calculations
+  float minimumspeedangle =
+      atan((tempTargetY + sqrt(tempTargetY * tempTargetY + targetX * targetX)) / targetX);
+
+
+  std::vector<point> minimumspeedpoints =
+      cartesianProjectile(minimumspeedangle * 180.f / 3.14159f,
+                          strengthOfGravity, minimumLaunchSpeed, launchHeight, 100, 1.f);
+
+  drawPoints(window, minimumspeedpoints);
+
+  float a =
+      targetX * targetX * (strengthOfGravity / (2 * launchSpeed * launchSpeed));
+  float b = -targetX;
+  float c = targetY - launchHeight + ((strengthOfGravity * targetX * targetX) /
+                          (2 * launchSpeed * launchSpeed));
+
+  float discriminant = b * b - 4 * a * c;
+  float mintantheta = (-b + sqrt(discriminant)) / (2 * a);
+  float maxtantheta = (-b - sqrt(discriminant)) / (2 * a);
+
+  float minangle = atan(mintantheta);
+  float maxangle = atan(maxtantheta);
+
+  std::vector<point> highBallpoints = cartesianProjectile(
+      maxangle * 180.f / 3.14159f, strengthOfGravity, launchSpeed, launchHeight, 100, 1.f);
+  std::vector<point> lowBallpoints = cartesianProjectile(
+      minangle * 180.f / 3.14159f, strengthOfGravity, launchSpeed, launchHeight, 100, 1.f);
+
+  drawPoints(window, highBallpoints, sf::Color::Red);
+  drawPoints(window, lowBallpoints, sf::Color::Blue);
+
+
+  sf::CircleShape ball(5.f);
+  ball.setOrigin(5.f, 5.f);
+  ball.setFillColor(sf::Color::Magenta);
+  ball.setPosition(targetX + X_AXIS_OFFSET, 720 - targetY - Y_AXIS_OFFSET);
+  window.draw(ball);
+}
 
 int RENDER_WIDTH = 1280;
 int RENDER_HEIGHT = 720;
@@ -204,6 +314,8 @@ int main() {
   sf::Clock deltaClock;
   while (window.isOpen()) {
     sf::Event event;
+    static int targetX = X_AXIS_OFFSET + 100;
+    static int targetY = Y_AXIS_OFFSET + 100;
     while (window.pollEvent(event)) {
       ImGui::SFML::ProcessEvent(event);
 
@@ -214,6 +326,14 @@ int main() {
         RENDER_WIDTH = event.size.width;
         RENDER_HEIGHT = event.size.height;
       }
+      if (choosePoint) {
+        if (event.type == sf::Event::MouseMoved) {
+          targetX = event.mouseMove.x - X_AXIS_OFFSET;
+          targetY = RENDER_HEIGHT - event.mouseMove.y - Y_AXIS_OFFSET;
+        }
+        if (event.type == sf::Event::MouseButtonPressed)
+          choosePoint = false;
+      }
     }
 
     ImGui::SFML::Update(window, deltaClock.restart());
@@ -221,12 +341,15 @@ int main() {
 
     drawGrid(window);
 
+
     ImGui::Begin("Challenge Choice Window");
     ImGui::Text("Choose a challenge to simulate");
     if (ImGui::Button("Challenge 1")) {
       currentChallenge = 1;
     } else if (ImGui::Button("Challenge 2")) {
       currentChallenge = 2;
+    } else if(ImGui::Button("Challenge 3")) {
+      currentChallenge = 3;
     }
     if (currentChallenge != 0) {
       if (ImGui::Button("Reset")) {
@@ -241,6 +364,9 @@ int main() {
         break;
       case 2:
         challenge2(window);
+        break;
+      case 3:
+        challenge3(window, targetX, targetY);
         break;
     }
 

@@ -121,7 +121,7 @@ std::vector<point> cartesianProjectile(float angle_deg, float strengthOfGravity,
   std::vector<point> points;
 
   float launchAngle_rad = angle_deg * 3.14159f / 180.f;
-  float range = 
+  float range =
       launchSpeed * launchSpeed / strengthOfGravity *
       (std::sin(launchAngle_rad) * std::cos(launchAngle_rad) +
        std::cos(launchAngle_rad) *
@@ -131,10 +131,10 @@ std::vector<point> cartesianProjectile(float angle_deg, float strengthOfGravity,
   float fraction_range = 1.f / numPoints;
   for (int i = 0; i < numPoints; i++) {
     float x = scale * range * i * fraction_range;
-    float y =
-        scale * launchHeight + x * std::tan(launchAngle_rad) -
-        strengthOfGravity / (2 * launchSpeed * launchSpeed) *
-            (1 + std::tan(launchAngle_rad) * std::tan(launchAngle_rad)) * x * x;
+    float y = scale * launchHeight + x * std::tan(launchAngle_rad) -
+              strengthOfGravity / (2 * launchSpeed * launchSpeed) *
+                  (1 + std::tan(launchAngle_rad) * std::tan(launchAngle_rad)) *
+                  x * x;
 
     points.push_back({x + X_AXIS_OFFSET, y + Y_AXIS_OFFSET});
   }
@@ -190,7 +190,7 @@ void challenge2(sf::RenderWindow &window) {
 bool choosePoint = false;
 
 void controlpanel3(int *targetX, int *targetY, float *strengthOfGravity,
-                   float *launchSpeed, float minSpeed, float * launchHeight) {
+                   float *launchSpeed, float minSpeed, float *launchHeight) {
   ImGui::Begin("Challenge 3");
 
   ImGui::Text("Legend");
@@ -202,20 +202,21 @@ void controlpanel3(int *targetX, int *targetY, float *strengthOfGravity,
   ImGui::Text("General Settings");
   ImGui::InputInt("Target X", targetX, 0, 1000);
   ImGui::InputInt("Target Y", targetY, 0, 1000);
-  if (ImGui::Button(choosePoint ? "Choosing point using mouse, Left Click to confirm"
-    : "Choose Point using mouse")) {
+  if (ImGui::Button(choosePoint
+                        ? "Choosing point using mouse, Left Click to confirm"
+                        : "Choose Point using mouse")) {
     choosePoint = !choosePoint;
   }
   ImGui::SliderFloat("Strength of Gravity", strengthOfGravity, 0.1, 10);
   ImGui::Text("Minimum Launch Speed: %f", minSpeed);
-  ImGui::SliderFloat("Launch Speed", launchSpeed, minSpeed, minSpeed + (minSpeed * 2));
+  ImGui::SliderFloat("Launch Speed", launchSpeed, minSpeed,
+                     minSpeed + (minSpeed * 2));
   ImGui::SliderFloat("Launch Height", launchHeight, 0, 500);
-
 
   ImGui::End();
 }
 
-void challenge3(sf::RenderWindow &window, int& targetX, int& targetY) {
+void challenge3(sf::RenderWindow &window, int &targetX, int &targetY) {
   // inputs
   static float strengthOfGravity = 9.81;
   static float launchHeight = 0;
@@ -230,20 +231,21 @@ void challenge3(sf::RenderWindow &window, int& targetX, int& targetY) {
 
   // calculations
   float minimumspeedangle =
-      atan((tempTargetY + sqrt(tempTargetY * tempTargetY + targetX * targetX)) / targetX);
+      atan((tempTargetY + sqrt(tempTargetY * tempTargetY + targetX * targetX)) /
+           targetX);
 
-
-  std::vector<point> minimumspeedpoints =
-      cartesianProjectile(minimumspeedangle * 180.f / 3.14159f,
-                          strengthOfGravity, minimumLaunchSpeed, launchHeight, 100, 1.f);
+  std::vector<point> minimumspeedpoints = cartesianProjectile(
+      minimumspeedangle * 180.f / 3.14159f, strengthOfGravity,
+      minimumLaunchSpeed, launchHeight, 100, 1.f);
 
   drawPoints(window, minimumspeedpoints);
 
   float a =
       targetX * targetX * (strengthOfGravity / (2 * launchSpeed * launchSpeed));
   float b = -targetX;
-  float c = targetY - launchHeight + ((strengthOfGravity * targetX * targetX) /
-                          (2 * launchSpeed * launchSpeed));
+  float c = targetY - launchHeight +
+            ((strengthOfGravity * targetX * targetX) /
+             (2 * launchSpeed * launchSpeed));
 
   float discriminant = b * b - 4 * a * c;
   float mintantheta = (-b + sqrt(discriminant)) / (2 * a);
@@ -252,14 +254,15 @@ void challenge3(sf::RenderWindow &window, int& targetX, int& targetY) {
   float minangle = atan(mintantheta);
   float maxangle = atan(maxtantheta);
 
-  std::vector<point> highBallpoints = cartesianProjectile(
-      maxangle * 180.f / 3.14159f, strengthOfGravity, launchSpeed, launchHeight, 100, 1.f);
-  std::vector<point> lowBallpoints = cartesianProjectile(
-      minangle * 180.f / 3.14159f, strengthOfGravity, launchSpeed, launchHeight, 100, 1.f);
+  std::vector<point> highBallpoints =
+      cartesianProjectile(maxangle * 180.f / 3.14159f, strengthOfGravity,
+                          launchSpeed, launchHeight, 100, 1.f);
+  std::vector<point> lowBallpoints =
+      cartesianProjectile(minangle * 180.f / 3.14159f, strengthOfGravity,
+                          launchSpeed, launchHeight, 100, 1.f);
 
   drawPoints(window, highBallpoints, sf::Color::Red);
   drawPoints(window, lowBallpoints, sf::Color::Blue);
-
 
   sf::CircleShape ball(5.f);
   ball.setOrigin(5.f, 5.f);
@@ -268,9 +271,10 @@ void challenge3(sf::RenderWindow &window, int& targetX, int& targetY) {
   window.draw(ball);
 }
 
-
-void controlPanel4(float* launchSpeed, float* launchHeight, float* strengthOfGravity, int* launchAngle, float bestlaunchAngle = 0, float currentRange = 0, float maxRange = 0)
-{
+void controlPanel4(float *launchSpeed, float *launchHeight,
+                   float *strengthOfGravity, int *launchAngle,
+                   float bestlaunchAngle = 0, float currentRange = 0,
+                   float maxRange = 0) {
   ImGui::Begin("Challenge 4 Controls");
   ImGui::SliderFloat("Strength of Gravity", strengthOfGravity, 0.1, 10);
 
@@ -285,8 +289,7 @@ void controlPanel4(float* launchSpeed, float* launchHeight, float* strengthOfGra
   ImGui::End();
 }
 
-void challenge4(sf::RenderWindow& window)
-{
+void challenge4(sf::RenderWindow &window) {
   static float launchSpeed = 20.f;
   static float strengthOfGravity = 9.81;
   static float launchHeight = 0;
@@ -296,32 +299,53 @@ void challenge4(sf::RenderWindow& window)
   static float launchAngle_rad = launchAngle * 3.14159f / 180.f;
 
   // Range calculations
-  float current_Range = (launchSpeed * launchSpeed)/strengthOfGravity * (std::sin(launchAngle_rad) * std::cos(launchAngle_rad) + std::cos(launchAngle_rad) * sqrt(std::sin(launchAngle_rad) * std::sin(launchAngle_rad) +2.f * strengthOfGravity * launchHeight/(launchSpeed * launchSpeed)));
-  float max_theta_rad = std::asin(1.f/(sqrt(2.f+2.f*strengthOfGravity* launchHeight/(launchSpeed*launchSpeed))));
-  float max_theta_deg = max_theta_rad * 180.f/3.14159f;
-  float max_Range = launchSpeed * launchSpeed/strengthOfGravity * sqrt(1.f+2.f * strengthOfGravity * launchHeight/(launchSpeed * launchSpeed));
+  float current_Range =
+      launchSpeed * launchSpeed / strengthOfGravity *
+      (std::sin(launchAngle * 3.14159f / 180.f) *
+           std::cos(launchAngle * 3.14159f / 180.f) +
+       std::cos(launchAngle * 3.14159f / 180.f) *
+           std::sqrt(std::sin(launchAngle * 3.14159f / 180.f) *
+                         std::sin(launchAngle * 3.14159f / 180.f) +
+                     2.f * strengthOfGravity * launchHeight /
+                         (launchSpeed * launchSpeed)));
+  float max_theta_rad =
+      std::asin(1.f / (sqrt(2.f + 2.f * strengthOfGravity * launchHeight /
+                                      (launchSpeed * launchSpeed))));
+  float max_theta_deg = max_theta_rad * 180.f / 3.14159f;
+  float max_Range = launchSpeed * launchSpeed / strengthOfGravity *
+                    sqrt(1.f + 2.f * strengthOfGravity * launchHeight /
+                                   (launchSpeed * launchSpeed));
 
   float bestLaunchAngle = max_theta_deg;
 
-  controlPanel4(&launchSpeed, &launchHeight, &strengthOfGravity, &launchAngle, bestLaunchAngle, current_Range, max_Range);
+  controlPanel4(&launchSpeed, &launchHeight, &strengthOfGravity, &launchAngle,
+                bestLaunchAngle, current_Range, max_Range);
 
-  std::vector<point> userParabola = cartesianProjectile(launchAngle, strengthOfGravity, launchSpeed, launchHeight, numPoints, scale);
-  std::vector<point> bestParabola = cartesianProjectile(bestLaunchAngle, strengthOfGravity, launchSpeed, launchHeight, numPoints, scale);
+  std::vector<point> userParabola =
+      cartesianProjectile(launchAngle, strengthOfGravity, launchSpeed,
+                          launchHeight, numPoints, scale);
+  std::vector<point> bestParabola =
+      cartesianProjectile(bestLaunchAngle, strengthOfGravity, launchSpeed,
+                          launchHeight, numPoints, scale);
 
   drawPoints(window, userParabola, sf::Color::Green);
   drawPoints(window, bestParabola, sf::Color::Magenta);
 }
 
-std::vector<point> boundingParabola(float strengthOfGravity,
-                                       float launchSpeed, float launchHeight,
-                                       int numPoints) {
+std::vector<point> boundingParabola(float strengthOfGravity, float launchSpeed,
+                                    float launchHeight, int numPoints) {
   std::vector<point> points;
 
-  float range = sqrt((2.f * launchSpeed * launchSpeed *(launchSpeed * launchSpeed/(2.f * strengthOfGravity) + launchHeight))/strengthOfGravity);
+  float range = sqrt(
+      (2.f * launchSpeed * launchSpeed *
+       (launchSpeed * launchSpeed / (2.f * strengthOfGravity) + launchHeight)) /
+      strengthOfGravity);
   float fraction_range = 1.f / numPoints;
   for (int i = 0; i < numPoints; i++) {
     float x = range * i * fraction_range;
-    float y = launchHeight + launchSpeed * launchSpeed/(2.f * strengthOfGravity) - strengthOfGravity/(2.f * launchSpeed * launchSpeed) * x * x;
+    float y = launchHeight +
+              launchSpeed * launchSpeed / (2.f * strengthOfGravity) -
+              strengthOfGravity / (2.f * launchSpeed * launchSpeed) * x * x;
 
     points.push_back({x + X_AXIS_OFFSET, y + Y_AXIS_OFFSET});
   }
@@ -329,9 +353,8 @@ std::vector<point> boundingParabola(float strengthOfGravity,
   return points;
 }
 
-
 void controlpanel5(int *targetX, int *targetY, float *strengthOfGravity,
-                   float *launchSpeed, float minSpeed, float * launchHeight) {
+                   float *launchSpeed, float minSpeed, float *launchHeight) {
   ImGui::Begin("Challenge 5");
 
   ImGui::Text("Legend");
@@ -341,26 +364,24 @@ void controlpanel5(int *targetX, int *targetY, float *strengthOfGravity,
   ImGui::TextColored(ImColor(0.f, 1.f, 0.f, 1.f), "Green: Low ball");
   ImGui::TextColored(ImColor(1.f, 1.f, 1.f, 1.f), "White: Min U");
 
-  
-
-
   ImGui::Text("General Settings");
   ImGui::InputInt("Target X", targetX, 0, 1000);
   ImGui::InputInt("Target Y", targetY, 0, 1000);
-  if (ImGui::Button(choosePoint ? "Choosing point using mouse, Left Click to confirm"
-    : "Choose Point using mouse")) {
+  if (ImGui::Button(choosePoint
+                        ? "Choosing point using mouse, Left Click to confirm"
+                        : "Choose Point using mouse")) {
     choosePoint = !choosePoint;
   }
   ImGui::SliderFloat("Strength of Gravity", strengthOfGravity, 0.1, 10);
   ImGui::Text("Minimum Launch Speed: %f", minSpeed);
-  ImGui::SliderFloat("Launch Speed", launchSpeed, minSpeed, minSpeed + (minSpeed * 2));
+  ImGui::SliderFloat("Launch Speed", launchSpeed, minSpeed,
+                     minSpeed + (minSpeed * 2));
   ImGui::SliderFloat("Launch Height", launchHeight, 0, 500);
-
 
   ImGui::End();
 }
 
-void challenge5(sf::RenderWindow &window, int& targetX, int& targetY) {
+void challenge5(sf::RenderWindow &window, int &targetX, int &targetY) {
   // inputs
   static float strengthOfGravity = 9.81;
   static float launchHeight = 0;
@@ -377,19 +398,19 @@ void challenge5(sf::RenderWindow &window, int& targetX, int& targetY) {
 
   // calculations
   float minimumspeedangle =
-      atan((tempTargetY + sqrt(tempTargetY * tempTargetY + targetX * targetX)) / targetX);
+      atan((tempTargetY + sqrt(tempTargetY * tempTargetY + targetX * targetX)) /
+           targetX);
 
-
-  std::vector<point> minimumspeedpoints =
-      cartesianProjectile(minimumspeedangle * 180.f / 3.14159f,
-                          strengthOfGravity, minimumLaunchSpeed, launchHeight, 100, 1.f);
-
+  std::vector<point> minimumspeedpoints = cartesianProjectile(
+      minimumspeedangle * 180.f / 3.14159f, strengthOfGravity,
+      minimumLaunchSpeed, launchHeight, 100, 1.f);
 
   float a =
       targetX * targetX * (strengthOfGravity / (2 * launchSpeed * launchSpeed));
   float b = -targetX;
-  float c = targetY - launchHeight + ((strengthOfGravity * targetX * targetX) /
-                          (2 * launchSpeed * launchSpeed));
+  float c = targetY - launchHeight +
+            ((strengthOfGravity * targetX * targetX) /
+             (2 * launchSpeed * launchSpeed));
 
   float discriminant = b * b - 4 * a * c;
   float mintantheta = (-b + sqrt(discriminant)) / (2 * a);
@@ -398,29 +419,26 @@ void challenge5(sf::RenderWindow &window, int& targetX, int& targetY) {
   float minangle = atan(mintantheta);
   float maxangle = atan(maxtantheta);
 
-  std::vector<point> highBallpoints = cartesianProjectile(
-      maxangle * 180.f / 3.14159f, strengthOfGravity, launchSpeed, launchHeight, 100, 1.f);
-  std::vector<point> lowBallpoints = cartesianProjectile(
-      minangle * 180.f / 3.14159f, strengthOfGravity, launchSpeed, launchHeight, 100, 1.f);
-
-
+  std::vector<point> highBallpoints =
+      cartesianProjectile(maxangle * 180.f / 3.14159f, strengthOfGravity,
+                          launchSpeed, launchHeight, 100, 1.f);
+  std::vector<point> lowBallpoints =
+      cartesianProjectile(minangle * 180.f / 3.14159f, strengthOfGravity,
+                          launchSpeed, launchHeight, 100, 1.f);
 
   // max range
 
-  float max_theta_rad = std::asin(1.f/(sqrt(2.f+2.f*strengthOfGravity* launchHeight/(launchSpeed*launchSpeed))));
-  float max_theta_deg = max_theta_rad * 180.f/3.14159f;
-  std::vector<point> bestParabola = cartesianProjectile(max_theta_deg, strengthOfGravity, launchSpeed, launchHeight, numPoints, scale);
-
-
-
-
-
+  float max_theta_rad =
+      std::asin(1.f / (sqrt(2.f + 2.f * strengthOfGravity * launchHeight /
+                                      (launchSpeed * launchSpeed))));
+  float max_theta_deg = max_theta_rad * 180.f / 3.14159f;
+  std::vector<point> bestParabola =
+      cartesianProjectile(max_theta_deg, strengthOfGravity, launchSpeed,
+                          launchHeight, numPoints, scale);
 
   // bounding parabola
-  std::vector<point> boundingParabola_ = boundingParabola(strengthOfGravity, launchSpeed, launchHeight, numPoints);
-
-
-  
+  std::vector<point> boundingParabola_ =
+      boundingParabola(strengthOfGravity, launchSpeed, launchHeight, numPoints);
 
   drawPoints(window, minimumspeedpoints, sf::Color::White);
   drawPoints(window, highBallpoints, sf::Color::Blue);
@@ -435,8 +453,7 @@ void challenge5(sf::RenderWindow &window, int& targetX, int& targetY) {
   window.draw(ball);
 }
 
-
-int RENDER_WIDTH = 1280;  
+int RENDER_WIDTH = 1280;
 int RENDER_HEIGHT = 720;
 void drawGrid(sf::RenderWindow &window) {
   // minor grid lines y axis
@@ -499,8 +516,7 @@ int main() {
           targetX = event.mouseMove.x - X_AXIS_OFFSET;
           targetY = RENDER_HEIGHT - event.mouseMove.y - Y_AXIS_OFFSET;
         }
-        if (event.type == sf::Event::MouseButtonPressed)
-          choosePoint = false;
+        if (event.type == sf::Event::MouseButtonPressed) choosePoint = false;
       }
     }
 
@@ -509,23 +525,22 @@ int main() {
 
     drawGrid(window);
 
-
     ImGui::Begin("Challenge Choice Window");
     ImGui::Text("Choose a challenge to simulate");
     if (ImGui::Button("Challenge 1")) {
       currentChallenge = 1;
     } else if (ImGui::Button("Challenge 2")) {
       currentChallenge = 2;
-    } else if(ImGui::Button("Challenge 3")) {
+    } else if (ImGui::Button("Challenge 3")) {
       currentChallenge = 3;
-    } else if(ImGui::Button("Challenge 4")) {
+    } else if (ImGui::Button("Challenge 4")) {
       currentChallenge = 4;
-    } else if(ImGui::Button("Challenge 5")) {
+    } else if (ImGui::Button("Challenge 5")) {
       currentChallenge = 5;
     }
     if (currentChallenge != 0) {
       if (ImGui::Button("Reset")) {
-        currentChallenge = 0;   
+        currentChallenge = 0;
       }
     }
     ImGui::End();
@@ -542,8 +557,10 @@ int main() {
         break;
       case 4:
         challenge4(window);
+        break;
       case 5:
         challenge5(window, targetX, targetY);
+        break;
     }
 
     ImGui::SFML::Render(window);

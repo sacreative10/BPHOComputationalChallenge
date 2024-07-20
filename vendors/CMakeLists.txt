@@ -1,12 +1,16 @@
 include(FetchContent)
 
-FetchContent_Declare(
-        sfml
-        GIT_REPOSITORY "https://github.com/SFML/SFML"
-        GIT_TAG "2.6.1"
-)
 
-add_subdirectory(sfml)
+if (CMAKE_USE_HOST_SFML)
+    find_package(SFML 2.6 COMPONENTS system window graphics network audio REQUIRED)
+else ()
+    FetchContent_Declare(
+            sfml
+            GIT_REPOSITORY "https://github.com/SFML/SFML"
+            GIT_TAG "2.6.1"
+    )
+    add_subdirectory(sfml)
+endif ()
 FetchContent_Declare(
         imgui
         GIT_REPOSITORY https://github.com/ocornut/imgui

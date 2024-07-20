@@ -4,5 +4,6 @@ project(example
         VERSION 1.0
 )
 
+set(CMAKE_USE_HOST_SFML OFF)
 add_subdirectory(vendors)
 add_subdirectory(src)

@@ -20,6 +20,9 @@ struct point {
   float y;
 };
 
+int RENDER_WIDTH = 1280;
+int RENDER_HEIGHT = 720;
+
 void controlPanel(float &timestep, float &launchSpeed, float &strengthOfGravity,
                   float &launchHeight, int &launchAngle, float &scale) {
   ImGui::Begin("Challenge 1");
@@ -453,8 +456,161 @@ void challenge5(sf::RenderWindow &window, int &targetX, int &targetY) {
   window.draw(ball);
 }
 
-int RENDER_WIDTH = 1280;
-int RENDER_HEIGHT = 720;
+void controlPanel6(float *launchSpeed, float *launchHeight,
+                   float *strengthOfGravity, int *launchAngle,
+                   float bestlaunchAngle = 0, float currentRange = 0,
+                   float maxRange = 0, float currentDistance = 0,
+                   float distanceMax = 0) {
+  ImGui::Begin("Challenge 6 Controls");
+  ImGui::SliderFloat("Strength of Gravity", strengthOfGravity, 0.1, 10);
+
+  ImGui::Text("Projectile Settings");
+  ImGui::SliderInt("Launch Angle", launchAngle, 0, 90);
+  ImGui::SliderFloat("Launch Speed", launchSpeed, 0, 500);
+  ImGui::SliderFloat("Launch Height", launchHeight, 0, 500);
+
+  ImGui::Text("Current Range: %f", currentRange);
+  ImGui::Text("Current Distance: %f", currentDistance);
+  ImGui::Text("Best Launch Angle: %f", bestlaunchAngle);
+  ImGui::Text("Best Range: %f", maxRange);
+  ImGui::Text("Best Distance: %f", distanceMax);
+  ImGui::End();
+}
+
+float integral(float x) {
+  return 0.5 * log(abs(sqrt(1 + x * x) + x)) + 0.5 * x * sqrt(1 + x * x);
+}
+
+void challenge6(sf::RenderWindow &window) {
+  static float launchSpeed = 20.f;
+  static float strengthOfGravity = 9.81;
+  static float launchHeight = 0;
+  static int launchAngle = 45;
+  static float scale = 1.f;
+  static int numPoints = 100;
+  static float launchAngle_rad = launchAngle * 3.14159f / 180.f;
+
+  // Range calculations
+  float current_Range =
+      launchSpeed * launchSpeed / strengthOfGravity *
+      (std::sin(launchAngle * 3.14159f / 180.f) *
+           std::cos(launchAngle * 3.14159f / 180.f) +
+       std::cos(launchAngle * 3.14159f / 180.f) *
+           std::sqrt(std::sin(launchAngle * 3.14159f / 180.f) *
+                         std::sin(launchAngle * 3.14159f / 180.f) +
+                     2.f * strengthOfGravity * launchHeight /
+                         (launchSpeed * launchSpeed)));
+  float max_theta_rad =
+      std::asin(1.f / (sqrt(2.f + 2.f * strengthOfGravity * launchHeight /
+                                      (launchSpeed * launchSpeed))));
+  float max_theta_deg = max_theta_rad * 180.f / 3.14159f;
+  float max_Range = launchSpeed * launchSpeed / strengthOfGravity *
+                    sqrt(1.f + 2.f * strengthOfGravity * launchHeight /
+                                   (launchSpeed * launchSpeed));
+
+  float bestLaunchAngle = max_theta_deg;
+
+  float currentDistanceIntegrand =
+      integral(std::tan(launchAngle_rad)) -
+      integral(std::tan(launchAngle_rad) -
+               ((strengthOfGravity * current_Range) / (launchSpeed * launchSpeed)) *
+                   (1 + (std::tan(launchAngle_rad) * std::tan(launchAngle_rad))));
+
+
+  float bestDistanceIntegrand = 
+      integral(std::tan(max_theta_rad)) -
+      integral(std::tan(max_theta_rad) -
+               ((strengthOfGravity * max_Range) / (launchSpeed * launchSpeed)) *
+                   (1 + std::tan(max_theta_rad) * std::tan(max_theta_rad)));
+
+  
+  float currentDistance = ((launchSpeed * launchSpeed)/(strengthOfGravity * (1 + std::tan(launchAngle_rad) * std::tan(launchAngle_rad)))) * currentDistanceIntegrand;
+  float bestDistance = ((launchSpeed * launchSpeed)/(strengthOfGravity * (1 + std::tan(max_theta_rad) * std::tan(max_theta_rad)))) * bestDistanceIntegrand;
+
+
+
+  controlPanel6(&launchSpeed, &launchHeight, &strengthOfGravity, &launchAngle,
+                bestLaunchAngle, current_Range, max_Range, currentDistance, bestDistance);
+
+  std::vector<point> userParabola =
+      cartesianProjectile(launchAngle, strengthOfGravity, launchSpeed,
+                          launchHeight, numPoints, scale);
+  std::vector<point> bestParabola =
+      cartesianProjectile(bestLaunchAngle, strengthOfGravity, launchSpeed,
+                          launchHeight, numPoints, scale);
+
+  drawPoints(window, userParabola, sf::Color::Green);
+  drawPoints(window, bestParabola, sf::Color::Magenta);
+}
+
+std::vector<point> rangePlots(float launchSpeed, float launchHeight, int num_Points, float deg_angle, float strength_of_gravity) {
+  std::vector<point> points;
+
+  float max_time = 10;
+  float angle_rad = deg_angle * 3.14159f / 180.f;
+
+  float t_to_x_axis = (float) RENDER_WIDTH / (float) max_time;
+  // Suggestion: work out absolute scale, by working out the best range from the given configuration
+  float range_to_y_axis = (float) RENDER_HEIGHT / (float) 100;
+  
+  float dt = max_time / num_Points;
+  for(float i = 0; i <= max_time; i += dt) {
+    float r = sqrt((launchSpeed * launchSpeed * i * i * std::cos(angle_rad)*std::cos(angle_rad)) + (launchSpeed * i * std::sin(angle_rad) - 0.5f * strength_of_gravity * i*i + launchHeight)*(launchSpeed * i * std::sin(angle_rad) - 0.5f * strength_of_gravity * i*i + launchHeight));
+    points.push_back({((i * t_to_x_axis) + X_AXIS_OFFSET), ((r * range_to_y_axis)  + Y_AXIS_OFFSET)});
+  };
+  return points;
+}
+
+void controlPanel7(float* launchSpeed, float* launchHeight, float* strengthOfGravity ,bool* seeRangePlot)
+{
+  ImGui::Begin("Challenge 7 Controls");
+  ImGui::SliderFloat("Strength of Gravity", strengthOfGravity, 0.1, 20);
+  ImGui::SliderFloat("Launch Speed", launchSpeed, 0.1, 1000);
+  ImGui::SliderFloat("Launch Height", launchHeight, 0.1, 1000);
+  if(ImGui::Button("Toggle Range Plot"))
+    seeRangePlot != seeRangePlot;
+
+  ImGui::End();
+}
+
+void challenge7(sf::RenderWindow& window)
+{
+  std::vector<float> angles = {30, 45, 60, 70.5, 78, 85};
+
+  std::vector<sf::Color> colors = {sf::Color::Blue, sf::Color::Green, sf::Color::Red, sf::Color::Cyan, sf::Color::Magenta, sf::Color::Yellow};
+
+  static float launchSpeed = 20.f;
+  static float launchHeight = 0;
+  static float strengthOfGravity = 10.f;
+  static bool seeRangePlot = true;
+
+  controlPanel7(&launchSpeed, &launchHeight, &strengthOfGravity, &seeRangePlot);
+
+
+  if (seeRangePlot)
+  {
+    for(int i = 0; i <= 6; i++)
+    {
+      float angle = angles[i];
+      auto color = colors[i];
+
+      auto points = rangePlots(launchSpeed, launchHeight, 1000, angle, strengthOfGravity);
+      drawPoints(window, points, color);
+    }
+
+  } else {
+    for(int i = 0; i <= 6; i++)
+    {
+      float angle = angles[i];
+      auto color = colors[i];
+
+      auto points = cartesianProjectile(angle, 9.81, launchSpeed, launchHeight, 100, 1);
+      drawPoints(window, points, color);
+    }
+  }
+}
+
+
 void drawGrid(sf::RenderWindow &window) {
   // minor grid lines y axis
   for (int i = 0; i < RENDER_WIDTH; i += Y_AXIS_OFFSET) {
@@ -507,6 +663,11 @@ int main() {
       if (event.type == sf::Event::Closed) {
         window.close();
       }
+      if (event.type == sf::Event::KeyPressed) {
+        if (event.KeyPressed == sf::Keyboard::Escape) {
+          window.close();
+        }
+      }
       if (event.type == sf::Event::Resized) {
         RENDER_WIDTH = event.size.width;
         RENDER_HEIGHT = event.size.height;
@@ -537,7 +698,12 @@ int main() {
       currentChallenge = 4;
     } else if (ImGui::Button("Challenge 5")) {
       currentChallenge = 5;
+    } else if (ImGui::Button("Challenge 6")) {
+      currentChallenge = 6;
+    } else if (ImGui::Button("Challenge 7")) {
+      currentChallenge = 7;
     }
+
     if (currentChallenge != 0) {
       if (ImGui::Button("Reset")) {
         currentChallenge = 0;
@@ -560,6 +726,12 @@ int main() {
         break;
       case 5:
         challenge5(window, targetX, targetY);
+        break;
+      case 6:
+        challenge6(window);
+        break;
+      case 7:
+        challenge7(window);
         break;
     }
 

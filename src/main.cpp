@@ -568,7 +568,7 @@ void controlPanel7(float* launchSpeed, float* launchHeight, float* strengthOfGra
   ImGui::SliderFloat("Launch Speed", launchSpeed, 0.1, 1000);
   ImGui::SliderFloat("Launch Height", launchHeight, 0.1, 1000);
   if(ImGui::Button("Toggle Range Plot"))
-    seeRangePlot != seeRangePlot;
+    *seeRangePlot = !(*seeRangePlot);
 
   ImGui::End();
 }

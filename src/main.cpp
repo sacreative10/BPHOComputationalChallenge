@@ -512,25 +512,31 @@ void challenge6(sf::RenderWindow &window) {
 
   float currentDistanceIntegrand =
       integral(std::tan(launchAngle_rad)) -
-      integral(std::tan(launchAngle_rad) -
-               ((strengthOfGravity * current_Range) / (launchSpeed * launchSpeed)) *
-                   (1 + (std::tan(launchAngle_rad) * std::tan(launchAngle_rad))));
+      integral(
+          std::tan(launchAngle_rad) -
+          ((strengthOfGravity * current_Range) / (launchSpeed * launchSpeed)) *
+              (1 + (std::tan(launchAngle_rad) * std::tan(launchAngle_rad))));
 
-
-  float bestDistanceIntegrand = 
+  float bestDistanceIntegrand =
       integral(std::tan(max_theta_rad)) -
       integral(std::tan(max_theta_rad) -
                ((strengthOfGravity * max_Range) / (launchSpeed * launchSpeed)) *
                    (1 + std::tan(max_theta_rad) * std::tan(max_theta_rad)));
 
-  
-  float currentDistance = ((launchSpeed * launchSpeed)/(strengthOfGravity * (1 + std::tan(launchAngle_rad) * std::tan(launchAngle_rad)))) * currentDistanceIntegrand;
-  float bestDistance = ((launchSpeed * launchSpeed)/(strengthOfGravity * (1 + std::tan(max_theta_rad) * std::tan(max_theta_rad)))) * bestDistanceIntegrand;
-
-
+  float currentDistance =
+      ((launchSpeed * launchSpeed) /
+       (strengthOfGravity *
+        (1 + std::tan(launchAngle_rad) * std::tan(launchAngle_rad)))) *
+      currentDistanceIntegrand;
+  float bestDistance =
+      ((launchSpeed * launchSpeed) /
+       (strengthOfGravity *
+        (1 + std::tan(max_theta_rad) * std::tan(max_theta_rad)))) *
+      bestDistanceIntegrand;
 
   controlPanel6(&launchSpeed, &launchHeight, &strengthOfGravity, &launchAngle,
-                bestLaunchAngle, current_Range, max_Range, currentDistance, bestDistance);
+                bestLaunchAngle, current_Range, max_Range, currentDistance,
+                bestDistance);
 
   std::vector<point> userParabola =
       cartesianProjectile(launchAngle, strengthOfGravity, launchSpeed,
@@ -543,41 +549,50 @@ void challenge6(sf::RenderWindow &window) {
   drawPoints(window, bestParabola, sf::Color::Magenta);
 }
 
-std::vector<point> rangePlots(float launchSpeed, float launchHeight, int num_Points, float deg_angle, float strength_of_gravity) {
+std::vector<point> rangePlots(float launchSpeed, float launchHeight,
+                              int num_Points, float deg_angle,
+                              float strength_of_gravity) {
   std::vector<point> points;
 
   float max_time = 10;
   float angle_rad = deg_angle * 3.14159f / 180.f;
 
-  float t_to_x_axis = (float) RENDER_WIDTH / (float) max_time;
-  // Suggestion: work out absolute scale, by working out the best range from the given configuration
-  float range_to_y_axis = (float) RENDER_HEIGHT / (float) 100;
-  
+  float t_to_x_axis = (float)RENDER_WIDTH / (float)max_time;
+  // Suggestion: work out absolute scale, by working out the best range from the
+  // given configuration
+  float range_to_y_axis = (float)RENDER_HEIGHT / (float)100;
+
   float dt = max_time / num_Points;
-  for(float i = 0; i <= max_time; i += dt) {
-    float r = sqrt((launchSpeed * launchSpeed * i * i * std::cos(angle_rad)*std::cos(angle_rad)) + (launchSpeed * i * std::sin(angle_rad) - 0.5f * strength_of_gravity * i*i + launchHeight)*(launchSpeed * i * std::sin(angle_rad) - 0.5f * strength_of_gravity * i*i + launchHeight));
-    points.push_back({((i * t_to_x_axis) + X_AXIS_OFFSET), ((r * range_to_y_axis)  + Y_AXIS_OFFSET)});
+  for (float i = 0; i <= max_time; i += dt) {
+    float r = sqrt((launchSpeed * launchSpeed * i * i * std::cos(angle_rad) *
+                    std::cos(angle_rad)) +
+                   (launchSpeed * i * std::sin(angle_rad) -
+                    0.5f * strength_of_gravity * i * i + launchHeight) *
+                       (launchSpeed * i * std::sin(angle_rad) -
+                        0.5f * strength_of_gravity * i * i + launchHeight));
+    points.push_back({((i * t_to_x_axis) + X_AXIS_OFFSET),
+                      ((r * range_to_y_axis) + Y_AXIS_OFFSET)});
   };
   return points;
 }
 
-void controlPanel7(float* launchSpeed, float* launchHeight, float* strengthOfGravity ,bool* seeRangePlot)
-{
+void controlPanel7(float *launchSpeed, float *launchHeight,
+                   float *strengthOfGravity, bool *seeRangePlot) {
   ImGui::Begin("Challenge 7 Controls");
   ImGui::SliderFloat("Strength of Gravity", strengthOfGravity, 0.1, 20);
   ImGui::SliderFloat("Launch Speed", launchSpeed, 0.1, 1000);
   ImGui::SliderFloat("Launch Height", launchHeight, 0.1, 1000);
-  if(ImGui::Button("Toggle Range Plot"))
-    *seeRangePlot = !(*seeRangePlot);
+  if (ImGui::Button("Toggle Range Plot")) *seeRangePlot = !(*seeRangePlot);
 
   ImGui::End();
 }
 
-void challenge7(sf::RenderWindow& window)
-{
+void challenge7(sf::RenderWindow &window) {
   std::vector<float> angles = {30, 45, 60, 70.5, 78, 85};
 
-  std::vector<sf::Color> colors = {sf::Color::Blue, sf::Color::Green, sf::Color::Red, sf::Color::Cyan, sf::Color::Magenta, sf::Color::Yellow};
+  std::vector<sf::Color> colors = {sf::Color::Blue,    sf::Color::Green,
+                                   sf::Color::Red,     sf::Color::Cyan,
+                                   sf::Color::Magenta, sf::Color::Yellow};
 
   static float launchSpeed = 20.f;
   static float launchHeight = 0;
@@ -586,29 +601,121 @@ void challenge7(sf::RenderWindow& window)
 
   controlPanel7(&launchSpeed, &launchHeight, &strengthOfGravity, &seeRangePlot);
 
-
-  if (seeRangePlot)
-  {
-    for(int i = 0; i <= 6; i++)
-    {
+  if (seeRangePlot) {
+    for (int i = 0; i <= 6; i++) {
       float angle = angles[i];
       auto color = colors[i];
 
-      auto points = rangePlots(launchSpeed, launchHeight, 1000, angle, strengthOfGravity);
+      auto points =
+          rangePlots(launchSpeed, launchHeight, 1000, angle, strengthOfGravity);
       drawPoints(window, points, color);
     }
 
   } else {
-    for(int i = 0; i <= 6; i++)
-    {
+    for (int i = 0; i <= 6; i++) {
       float angle = angles[i];
       auto color = colors[i];
 
-      auto points = cartesianProjectile(angle, 9.81, launchSpeed, launchHeight, 100, 1);
+      auto points =
+          cartesianProjectile(angle, 9.81, launchSpeed, launchHeight, 100, 1);
       drawPoints(window, points, color);
     }
   }
 }
+
+std::vector<point> cartesianProjectile(float angle_deg, float strengthOfGravity,
+                                       float launchSpeed, float launchHeight,
+                                       int numPoints, float scale,
+                                       float startingX) {
+  std::vector<point> points;
+
+  float launchAngle_rad = angle_deg * 3.14159f / 180.f;
+  float range =
+      launchSpeed * launchSpeed / strengthOfGravity *
+      (std::sin(launchAngle_rad) * std::cos(launchAngle_rad) +
+       std::cos(launchAngle_rad) *
+           std::sqrt(std::sin(launchAngle_rad) * std::sin(launchAngle_rad) +
+                     2.f * strengthOfGravity * launchHeight /
+                         (launchSpeed * launchSpeed)));
+  float fraction_range = 1.f / numPoints;
+  for (int i = 0; i < numPoints; i++) {
+    float x = startingX + (scale * range * i * fraction_range);
+    float y = scale * launchHeight + x * std::tan(launchAngle_rad) -
+              strengthOfGravity / (2 * launchSpeed * launchSpeed) *
+                  (1 + std::tan(launchAngle_rad) * std::tan(launchAngle_rad)) *
+                  x * x;
+
+    points.push_back({x + X_AXIS_OFFSET, y + Y_AXIS_OFFSET});
+  }
+
+  return points;
+}
+
+float quadratic(float a, float b, float c) {
+  return (-b + sqrt((b * b) + (4 * a * c))) / (2.f * a);
+}
+void controlPanel8(int *max_bounces, float *coeffRes, float *launchSpeed,
+                   float *launchHeight, float *launchAngle,
+                   float *strengthOfGravity) {
+  ImGui::Begin("Challenge 8");
+  ImGui::InputInt("Max Bounces: ", max_bounces);
+  ImGui::SliderFloat("Coefficient of Res: ", coeffRes, 0.f, 1.f);
+  ImGui::SliderFloat("Launch Speed", launchSpeed, 0.f, 1000.f);
+  ImGui::SliderFloat("Launch Height", launchHeight, 0.f, (float)RENDER_HEIGHT);
+  ImGui::SliderFloat("Launch Angle", launchAngle, 0.f, 90.f);
+  ImGui::SliderFloat("Strength of Gravity", strengthOfGravity, 0.f, 20.f);
+
+  ImGui::End();
+}
+
+
+std::vector<point> challenge8computation(sf::RenderWindow& window) {
+  static int max_bounces = 10;
+  static float launchSpeed = 20;
+  static float coeffRes = 0.7f;
+  static float launchHeight = 20;
+  static float launchAngle = 45;
+  static float strengthOfGravity = 9.81;
+
+  controlPanel8(&max_bounces, &coeffRes, &launchSpeed, &launchHeight,
+                &launchAngle, &strengthOfGravity);
+
+  std::vector<point> points;
+
+  float dt = 0.001;
+  float theta = launchAngle * 3.14159f / 180.f;
+
+  float velX = std::cos(theta) * launchSpeed;
+  float velY = std::sin(theta) * launchSpeed;
+
+  float posX = Y_AXIS_OFFSET;
+  float posY = launchHeight + X_AXIS_OFFSET;
+
+  int numBounces = 0;
+
+  while (numBounces <= max_bounces)
+  {
+    posX += velX * dt;
+    posY += velY * dt - 0.5f * dt * dt * strengthOfGravity;
+
+    velX = velX;
+    velY += -strengthOfGravity * dt;
+
+    if (posY < X_AXIS_OFFSET)
+    {
+      numBounces++;
+      posY = X_AXIS_OFFSET;
+      velY = -coeffRes * velY;
+    }   
+
+    points.push_back({posX, posY});
+  }
+
+  drawPoints(window, points);
+
+  return points;
+}
+
 
 
 void drawGrid(sf::RenderWindow &window) {
@@ -653,6 +760,10 @@ int main() {
   int currentChallenge = 0;
 
   sf::Clock deltaClock;
+  sf::Clock challenge8Clock;
+  challenge8Clock.restart();
+  std::vector<point> challenge8points;
+  int challenge8iter = 0;
   while (window.isOpen()) {
     sf::Event event;
     static int targetX = X_AXIS_OFFSET + 100;
@@ -686,6 +797,8 @@ int main() {
 
     drawGrid(window);
 
+
+
     ImGui::Begin("Challenge Choice Window");
     ImGui::Text("Choose a challenge to simulate");
     if (ImGui::Button("Challenge 1")) {
@@ -702,6 +815,11 @@ int main() {
       currentChallenge = 6;
     } else if (ImGui::Button("Challenge 7")) {
       currentChallenge = 7;
+    } else if (ImGui::Button("Challenge 8 Config")) {
+      currentChallenge = 8;
+    } else if (ImGui::Button("Challenge 8 Animate")) {
+      currentChallenge = 80;
+      challenge8iter = 0;
     }
 
     if (currentChallenge != 0) {
@@ -710,6 +828,8 @@ int main() {
       }
     }
     ImGui::End();
+
+
 
     switch (currentChallenge) {
       case 1:
@@ -733,6 +853,24 @@ int main() {
       case 7:
         challenge7(window);
         break;
+      case 8:
+        challenge8points = challenge8computation(window);
+        break;
+      case 80:
+        for(int i = 0; i < challenge8iter; i++)
+        {
+          point p = challenge8points[i];
+          sf::CircleShape ball(2.f);
+          ball.setFillColor(sf::Color::Green);
+          ball.setPosition(p.x, 720 - p.y);
+          window.draw(ball);
+        }
+        if (!(challenge8Clock.getElapsedTime().asSeconds() <= 0.0001))
+        {
+          challenge8iter += 50;
+          challenge8Clock.restart();
+        }
+
     }
 
     ImGui::SFML::Render(window);

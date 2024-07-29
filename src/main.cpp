@@ -716,6 +716,75 @@ std::vector<point> challenge8computation(sf::RenderWindow& window) {
   return points;
 }
 
+void controlPanel9(float *launchSpeed, float *launchHeight, float *launchAngle,
+                   float *strengthOfGravity, float *dragCoeef, float *crossA, float* airDensity, float* objectMass) {
+  ImGui::Begin("Challenge 8");
+  ImGui::SliderFloat("Launch Speed", launchSpeed, 0.f, 1000.f);
+  ImGui::SliderFloat("Launch Height", launchHeight, 0.f, (float)RENDER_HEIGHT);
+  ImGui::SliderFloat("Launch Angle", launchAngle, 0.f, 90.f);
+  ImGui::SliderFloat("Strength of Gravity", strengthOfGravity, 0.f, 20.f);
+  ImGui::SliderFloat("Drag Coefficient", dragCoeef, 0.f, 1.f);
+  ImGui::SliderFloat("Cross Area", crossA, 0.f, 1.f);
+  ImGui::SliderFloat("Air Density", airDensity, 0.f, 10.f);
+  ImGui::SliderFloat("Object Mass", objectMass, 0.f, 90.f);
+
+
+  ImGui::End();
+}
+void challenge9(sf::RenderWindow& window) {
+
+  static float launchSpeed = 20;
+  static float launchHeight = 20;
+  static float launchAngle = 45;
+  static float strengthOfGravity = 9.81;
+  static float dragCoeff = 0.1f;
+  static float crossArea = 0.1f;
+  static float airDensity = 1.f;
+  static float objectMass = 0.1f;
+
+
+  controlPanel9(&launchSpeed, &launchHeight,
+                &launchAngle, &strengthOfGravity, &dragCoeff, &crossArea, &airDensity, &objectMass);
+
+  std::vector<point> points;
+
+  float k = 0.5f * dragCoeff * airDensity * crossArea * (1.f / objectMass);
+
+  float dt = 0.01;
+  float theta = launchAngle * 3.14159f / 180.f;
+
+  float velX = std::cos(theta) * launchSpeed;
+  float velY = std::sin(theta) * launchSpeed;
+  float vel = launchSpeed;
+
+  float posX = Y_AXIS_OFFSET;
+  float posY = launchHeight + X_AXIS_OFFSET;
+
+  float accX = -velX / vel * k * vel * vel;
+  float accY = -strengthOfGravity -velY / vel * k * vel * vel;
+
+
+
+  while (posY >= X_AXIS_OFFSET)
+  {
+
+    posX += velX * dt;
+    posY += velY * dt - 0.5f * dt * dt * strengthOfGravity;
+
+    velX += accX * dt;
+    velY += accY * dt;
+
+    vel = sqrt(velX * velX + velY * velY);
+
+    accX = -(velX / vel) * k * vel * vel;
+    accY = -strengthOfGravity - (velY / vel) * k * vel * vel;
+
+    points.push_back({posX, posY});
+  }
+
+  drawPoints(window, points);
+}
+
 
 
 void drawGrid(sf::RenderWindow &window) {
@@ -820,7 +889,9 @@ int main() {
     } else if (ImGui::Button("Challenge 8 Animate")) {
       currentChallenge = 80;
       challenge8iter = 0;
-    }
+    }  else if (ImGui::Button("Challenge 9")) {
+      currentChallenge = 9;
+    } 
 
     if (currentChallenge != 0) {
       if (ImGui::Button("Reset")) {
@@ -856,7 +927,11 @@ int main() {
       case 8:
         challenge8points = challenge8computation(window);
         break;
+      case 9:
+        challenge9(window);
+        break;
       case 80:
+
         for(int i = 0; i < challenge8iter; i++)
         {
           point p = challenge8points[i];

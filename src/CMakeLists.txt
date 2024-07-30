@@ -1,5 +1,5 @@
 add_executable(BPHOComputationalChallenge main.cpp)
-target_link_libraries(BPHOComputationalChallenge PRIVATE ImGui-SFML::ImGui-SFML)
+target_link_libraries(BPHOComputationalChallenge PRIVATE ImGui-SFML::ImGui-SFML glm)
 
 ## we need the ability to build for android devices
 #if (ANDROID)

@@ -8,11 +8,7 @@
 #include <SFML/Window/Event.hpp>
 #include <vector>
 
-#define GLM_FORCE_SWIZZLE
-#define GLM_FORCE_INTRINSICS
-#include <algorithm>
-#include <execution>
-
+#define GLM_SWIZZLE
 #include "SFML/Graphics/CircleShape.hpp"
 #include "SFML/Graphics/RenderTexture.hpp"
 #include "SFML/Graphics/Sprite.hpp"
@@ -101,24 +97,24 @@ point getUV(glm::vec3& p) {
   return point{phi / (2 * glm::pi<float>()), theta / glm::pi<float>()};
 }
 
-float averageDepth(const glm::mat4& mvp, const triangle& tri) {
-  glm::vec4 p1 = mvp * glm::vec4(tri.p1, 1.0f);
-  glm::vec4 p2 = mvp * glm::vec4(tri.p2, 1.0f);
-  glm::vec4 p3 = mvp * glm::vec4(tri.p3, 1.0f);
-  return (p1.z + p2.z + p3.z) / 3.0f;
+float cross2D(glm::vec2 a, glm::vec2 b) { return a.x * b.y - a.y * b.x; }
+
+// true if ccw, false if cw
+bool determineWindingOrder(triangle2D& tri) {
+  float cross = cross2D(tri.p2 - tri.p1, tri.p3 - tri.p1);
+  if (cross > 0) return false;
+  return true;
 }
 
 void drawPolygon(sf::RenderWindow& window, glm::mat4& mvp,
                  std::vector<triangle>& triangles, sf::Texture texture) {
-  std::sort(triangles.begin(), triangles.end(),
-            [&](const triangle& a, const triangle& b) {
-              return averageDepth(mvp, a) < averageDepth(mvp, b);
-            });
+  for (auto& triangle : triangles) {
+    // check if winding order is correct
+    // if not, we skip the triangle
 
-  std::for_each(triangles.begin(), triangles.end(), [&](triangle& tri) {
-    glm::vec3 p1 = mvp * glm::vec4(tri.p1, 1.0f);
-    glm::vec3 p2 = mvp * glm::vec4(tri.p2, 1.0f);
-    glm::vec3 p3 = mvp * glm::vec4(tri.p3, 1.0f);
+    glm::vec3 p1 = mvp * glm::vec4(triangle.p1, 1.0f);
+    glm::vec3 p2 = mvp * glm::vec4(triangle.p2, 1.0f);
+    glm::vec3 p3 = mvp * glm::vec4(triangle.p3, 1.0f);
 
     // translate to screen space
     p1.x = (p1.x + 1.0f) * 0.5f * RENDER_WIDTH;
@@ -130,6 +126,9 @@ void drawPolygon(sf::RenderWindow& window, glm::mat4& mvp,
     p3.x = (p3.x + 1.0f) * 0.5f * RENDER_WIDTH;
     p3.y = (p3.y + 1.0f) * 0.5f * RENDER_HEIGHT;
 
+    triangle2D tri2D = triangle2D{glm::vec2(p1.x, p1.y), glm::vec2(p2.x, p2.y),
+                                  glm::vec2(p3.x, p3.y)};
+
     std::vector<sf::Vertex> verts;
     verts.push_back(sf::Vertex(sf::Vector2f(p1.x, p1.y)));
     verts.push_back(sf::Vertex(sf::Vector2f(p2.x, p2.y)));
@@ -137,19 +136,19 @@ void drawPolygon(sf::RenderWindow& window, glm::mat4& mvp,
     verts.push_back(sf::Vertex(sf::Vector2f(p1.x, p1.y)));
 
     // texture coordinates
-    point uv1 = getUV(tri.p1);
-    point uv2 = getUV(tri.p2);
-    point uv3 = getUV(tri.p3);
+    point uv1 = getUV(triangle.p1);
+    point uv2 = getUV(triangle.p2);
+    point uv3 = getUV(triangle.p3);
 
-    verts[0].texCoords = sf::Vector2f((1 - uv1.x) * texture.getSize().x,
-                                      (uv1.y) * texture.getSize().y);
-    verts[1].texCoords = sf::Vector2f((1 - uv2.x) * texture.getSize().x,
-                                      (uv2.y) * texture.getSize().y);
-    verts[2].texCoords = sf::Vector2f((1 - uv3.x) * texture.getSize().x,
-                                      (uv3.y) * texture.getSize().y);
+    verts[0].texCoords =
+        sf::Vector2f(uv1.x * texture.getSize().x, uv1.y * texture.getSize().y);
+    verts[1].texCoords =
+        sf::Vector2f(uv2.x * texture.getSize().x, uv2.y * texture.getSize().y);
+    verts[2].texCoords =
+        sf::Vector2f(uv3.x * texture.getSize().x, uv3.y * texture.getSize().y);
 
     window.draw(verts.data(), verts.size(), sf::Triangles, &texture);
-  });
+  }
 }
 
 int main() {
@@ -167,13 +166,14 @@ int main() {
 
   glm::mat4 viewMatrix = glm::lookAt(cameraPos, lookingAt, glm::vec3(0, 1, 0));
 
-  float rotateAngle = 0.01f;
-  int depth = 5;
+  float rotateAngle = 0.0f;
+  int depth = 0;
+  float t = 0.0f;
   float length = 5.0f;
-  float scale = 0.105f;
+  float scale = 0.5f;
 
-  glm::mat4 modelMatrix =
-      glm::scale(glm::mat4(1.f), glm::vec3(scale, scale, scale));
+  glm::mat4 modelMatrix = glm::mat4(1.0f);
+  // scale the model
 
   glm::mat4 mvp = projectionMatrix * viewMatrix * modelMatrix;
 
@@ -181,9 +181,6 @@ int main() {
 
   sf::Texture texture;
   texture.loadFromFile("../../earthmap.jpg");
-
-  auto mesh = subdivideDepth(octahedronPoints, depth);
-  normaliseWithRespectToLength(mesh, glm::vec3{0, 0, 0}, length, 1.f);
 
   sf::CircleShape shape(100.f);
   shape.setFillColor(sf::Color::Green);
@@ -215,18 +212,12 @@ int main() {
     ImGui::End();
 
     ImGui::Begin("Model Controls");
-    ImGui::SliderFloat("Rotate Angle", &rotateAngle, 0.0f, 0.01);
+    ImGui::SliderFloat("Rotate Angle", &rotateAngle, 0.0f, 360.0f);
     ImGui::SliderInt("Depth", &depth, 0, 10);
-    if (ImGui::Button("Subdivide")) {
-      mesh = subdivideDepth(octahedronPoints, depth);
-    }
-    if (ImGui::SliderFloat("Scale", &scale, 0.0f, 1.0f)) {
+    if (ImGui::SliderFloat("Scale", &scale, 0.0f, 1.0f))
       modelMatrix = glm::scale(glm::mat4(1.f), glm::vec3(scale, scale, scale));
-    }
-    ImGui::SliderFloat("Length", &length, 0.0f, 50.0f);
-    if (ImGui::Button("Expand")) {
-      normaliseWithRespectToLength(mesh, glm::vec3{0, 0, 0}, length, 1.f);
-    }
+    ImGui::SliderFloat("T", &t, 0.0f, 1.0f);
+    ImGui::SliderFloat("Length", &length, 0.0f, 10.0f);
 
     ImGui::End();
 
@@ -239,10 +230,13 @@ int main() {
 
     mvp = projectionMatrix * viewMatrix * modelMatrix;
 
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    window.clear();
 
-    drawPolygon(window, mvp, mesh, texture);
     ImGui::SFML::Render(window);
+    auto subdivided = subdivideDepth(octahedronPoints, depth);
+    normaliseWithRespectToLength(subdivided, glm::vec3(0, 0, 0), length, t);
+
+    drawPolygon(window, mvp, subdivided, texture);
 
     // window.draw(shape);
 

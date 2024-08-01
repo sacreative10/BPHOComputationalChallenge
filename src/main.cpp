@@ -108,17 +108,32 @@ float averageDepth(const glm::mat4& mvp, const triangle& tri) {
   return (p1.z + p2.z + p3.z) / 3.0f;
 }
 
+struct depthPair {
+  float depth;
+  int index;
+};
+
 void drawPolygon(sf::RenderWindow& window, glm::mat4& mvp,
                  std::vector<triangle>& triangles, sf::Texture texture) {
-  std::sort(triangles.begin(), triangles.end(),
-            [&](const triangle& a, const triangle& b) {
-              return averageDepth(mvp, a) < averageDepth(mvp, b);
-            });
+  auto computedMesh = triangles;
+  for (auto& tri : computedMesh) {
+    tri = triangle{mvp * glm::vec4(tri.p1, 1.0f), mvp * glm::vec4(tri.p2, 1.0f),
+                   mvp * glm::vec4(tri.p3, 1.0f)};
+  }
 
-  std::for_each(triangles.begin(), triangles.end(), [&](triangle& tri) {
-    glm::vec3 p1 = mvp * glm::vec4(tri.p1, 1.0f);
-    glm::vec3 p2 = mvp * glm::vec4(tri.p2, 1.0f);
-    glm::vec3 p3 = mvp * glm::vec4(tri.p3, 1.0f);
+  std::vector<depthPair> depthPairs = std::vector<depthPair>(triangles.size());
+  for (int i = 0; i < triangles.size(); i++) {
+    depthPairs[i] = depthPair{averageDepth(mvp, triangles[i]), i};
+  }
+
+  // sort by depth
+  std::sort(depthPairs.begin(), depthPairs.end(),
+            [](depthPair a, depthPair b) { return a.depth < b.depth; });
+
+  for (int i = 0; i < depthPairs.size(); i++) {
+    glm::vec3 p1 = computedMesh[depthPairs[i].index].p1;
+    glm::vec3 p2 = computedMesh[depthPairs[i].index].p2;
+    glm::vec3 p3 = computedMesh[depthPairs[i].index].p3;
 
     // translate to screen space
     p1.x = (p1.x + 1.0f) * 0.5f * RENDER_WIDTH;
@@ -137,9 +152,10 @@ void drawPolygon(sf::RenderWindow& window, glm::mat4& mvp,
     verts.push_back(sf::Vertex(sf::Vector2f(p1.x, p1.y)));
 
     // texture coordinates
-    point uv1 = getUV(tri.p1);
-    point uv2 = getUV(tri.p2);
-    point uv3 = getUV(tri.p3);
+    auto tri = triangles[depthPairs[i].index];
+    auto uv1 = getUV(tri.p1);
+    auto uv2 = getUV(tri.p2);
+    auto uv3 = getUV(tri.p3);
 
     verts[0].texCoords = sf::Vector2f((1 - uv1.x) * texture.getSize().x,
                                       (uv1.y) * texture.getSize().y);
@@ -149,44 +165,95 @@ void drawPolygon(sf::RenderWindow& window, glm::mat4& mvp,
                                       (uv3.y) * texture.getSize().y);
 
     window.draw(verts.data(), verts.size(), sf::Triangles, &texture);
-  });
+  };
+}
+
+struct modelSettingsStruct {
+  glm::vec3 modelPos = glm::vec3(0, 0, 0);
+  float rotateAngle = 0.00f;
+  int depth = 5;
+  float radius = 10.0f;
+  float scale = 0.08f;
+};
+
+struct cameraSettingsStruct {
+  glm::vec3 cameraPos = glm::vec3(0, 0, 5);
+  glm::vec3 lookingAt = glm::vec3(0, 0, 0);
+};
+
+glm::vec3 thetaPhiToCartesian(float theta, float phi, float rad) {
+  float x = rad * std::cos(phi) * std::cos(theta);
+  float y = rad * std::cos(phi) * std::sin(theta);
+  float z = rad * std::sin(phi);
+
+  return glm::vec3(x, y, z);
+}
+void drawPointOnEarth(sf::RenderWindow& window, float lat, float lon,
+                      float radius, glm::mat4 mvp) {
+  glm::vec3 point;
+  lat = glm::radians(lat);
+  lon = glm::radians(lon);
+
+  // phi -> latitude
+  // theta -> longitude
+
+  point.x = radius * std::cos(lat) * std::cos(lon);
+  point.y = radius * std::cos(lat) * std::sin(lon);
+  point.z = radius * std::sin(lat);
+
+  point = mvp * glm::vec4(point, 1.0f);
+
+  point.x = (point.x + 1.0f) * 0.5f * RENDER_WIDTH;
+  point.y = (point.y + 1.0f) * 0.5f * RENDER_HEIGHT;
+
+  sf::CircleShape circle(2);
+  circle.setPosition(point.x, point.y);
+  circle.setFillColor(sf::Color::Red);
+  window.draw(circle);
 }
 
 int main() {
+  sf::ContextSettings settings;
+  settings.antialiasingLevel = 8;
+  settings.depthBits = 24;
   sf::RenderWindow window(sf::VideoMode(RENDER_WIDTH, RENDER_HEIGHT),
-                          "BPHO Computational Challenge");
-  window.setFramerateLimit(60);
+                          "BPHO Computational Challenge", sf::Style::Default,
+                          settings);
+  window.setFramerateLimit(120);
   ImGui::SFML::Init(window);
+
+  auto cameraSettings = cameraSettingsStruct();
+  auto modelSettings = modelSettingsStruct();
 
   glm::mat4 projectionMatrix = glm::perspective(
       glm::radians(90.0f), (float)RENDER_WIDTH / (float)RENDER_HEIGHT, 0.1f,
       100.0f);
 
-  glm::vec3 cameraPos = glm::vec3(0, 0, 5);
-  glm::vec3 lookingAt = glm::vec3(0, 0, 0);
-
-  glm::mat4 viewMatrix = glm::lookAt(cameraPos, lookingAt, glm::vec3(0, 1, 0));
-
-  float rotateAngle = 0.01f;
-  int depth = 5;
-  float length = 5.0f;
-  float scale = 0.105f;
+  glm::mat4 viewMatrix = glm::lookAt(
+      cameraSettings.cameraPos, cameraSettings.lookingAt, glm::vec3(0, 1, 0));
 
   glm::mat4 modelMatrix =
-      glm::scale(glm::mat4(1.f), glm::vec3(scale, scale, scale));
-
+      glm::scale(glm::mat4(1.f),
+                 glm::vec3(modelSettings.scale, modelSettings.scale,
+                           modelSettings.scale)) *
+      glm::translate(glm::mat4(1.f), modelSettings.modelPos);
   glm::mat4 mvp = projectionMatrix * viewMatrix * modelMatrix;
-
-  sf::Clock deltaClock;
 
   sf::Texture texture;
   texture.loadFromFile("../../earthmap.jpg");
 
-  auto mesh = subdivideDepth(octahedronPoints, depth);
-  normaliseWithRespectToLength(mesh, glm::vec3{0, 0, 0}, length, 1.f);
+  auto mesh = subdivideDepth(octahedronPoints, modelSettings.depth);
+  normaliseWithRespectToLength(mesh, glm::vec3{0, 0, 0}, modelSettings.radius,
+                               1.f);
 
-  sf::CircleShape shape(100.f);
-  shape.setFillColor(sf::Color::Green);
+  float lat = -28.37;
+  float lon = 77;
+
+  glEnable(GL_DEPTH_TEST);
+  glDepthMask(GL_TRUE);
+  glClearDepth(1.f);
+  glDepthFunc(GL_LESS);
+  sf::Clock deltaClock;
   while (window.isOpen()) {
     sf::Event event;
     static int targetX = X_AXIS_OFFSET + 100;
@@ -210,41 +277,42 @@ int main() {
     ImGui::SFML::Update(window, deltaClock.restart());
 
     ImGui::Begin("Camera Controls");
-    ImGui::SliderFloat3("Camera Pos", &cameraPos.x, -100.0f, 100.0f);
-    ImGui::SliderFloat3("Looking At", &lookingAt.x, -100.0f, 100.0f);
+    ImGui::SliderFloat3("Camera Pos", &cameraSettings.cameraPos.x, -100.0f,
+                        100.0f);
+    ImGui::SliderFloat3("Looking At", &cameraSettings.lookingAt.x, -100.0f,
+                        100.0f);
     ImGui::End();
 
-    ImGui::Begin("Model Controls");
-    ImGui::SliderFloat("Rotate Angle", &rotateAngle, 0.0f, 0.01);
-    ImGui::SliderInt("Depth", &depth, 0, 10);
-    if (ImGui::Button("Subdivide")) {
-      mesh = subdivideDepth(octahedronPoints, depth);
+    ImGui::Begin("Earth Controls");
+    if (ImGui::Button("Toggle Rotation")) {
+      modelSettings.rotateAngle =
+          modelSettings.rotateAngle == 0.0f ? 0.01f : 0.0f;
     }
-    if (ImGui::SliderFloat("Scale", &scale, 0.0f, 1.0f)) {
-      modelMatrix = glm::scale(glm::mat4(1.f), glm::vec3(scale, scale, scale));
-    }
-    ImGui::SliderFloat("Length", &length, 0.0f, 50.0f);
-    if (ImGui::Button("Expand")) {
-      normaliseWithRespectToLength(mesh, glm::vec3{0, 0, 0}, length, 1.f);
-    }
+    ImGui::End();
+
+    ImGui::Begin("Launch Control");
+    ImGui::SliderFloat("Longtitude", &lon, -90, 90);
+    ImGui::SliderFloat("Latitude", &lat, -180, 180);
 
     ImGui::End();
 
     projectionMatrix = glm::perspective(
         glm::radians(90.0f), (float)RENDER_WIDTH / (float)RENDER_HEIGHT, 0.1f,
         100.0f);
-    viewMatrix = glm::lookAt(cameraPos, lookingAt, glm::vec3(0, 1, 0));
 
-    modelMatrix = glm::rotate(modelMatrix, rotateAngle, glm::vec3(0, 1, 0));
+    viewMatrix = glm::lookAt(cameraSettings.cameraPos, cameraSettings.lookingAt,
+                             glm::vec3(0, 1, 0));
+
+    modelMatrix =
+        glm::rotate(modelMatrix, modelSettings.rotateAngle, glm::vec3(0, 1, 0));
 
     mvp = projectionMatrix * viewMatrix * modelMatrix;
 
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    window.clear();
 
     drawPolygon(window, mvp, mesh, texture);
+    drawPointOnEarth(window, lat, lon, modelSettings.radius, mvp);
     ImGui::SFML::Render(window);
-
-    // window.draw(shape);
 
     window.display();
   }

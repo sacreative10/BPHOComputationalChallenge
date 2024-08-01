@@ -1,7 +1,6 @@
 \documentclass[a4paper,11pt]{article}
 \usepackage[utf8]{inputenc}
 \usepackage[paper=a4paper]{geometry}
-\usepackage[numbers]{natbib}
 \usepackage{hyperref}
 \hypersetup{
     colorlinks=true,
@@ -19,10 +18,12 @@
 \usepackage{listings}
 \usepackage{amsmath}
 \usepackage{graphicx}
+\usepackage{biblatex}
 \pgfplotsset{width=7cm, compat=1.9}
 \newlist{worddefs}{description}{1}
 \setlist[worddefs]{font=\bfseries, labelindent=\parindent, leftmargin=6em, style=sameline}
-
+\addbibresource{Library.bib}
+\bibliography{Library.bib}
 \title{\textbf{}}
 \author{A. Joshi and S. Alam}
 \date{}
@@ -48,9 +49,9 @@
 %Extension stuff
 %bibliography
 \newpage
-hi \cite{handout}
-\nocite{*}
-\bibliography{bibfile.bib}
+Hello my name is \cite{handout}
+\printbibliography
+
 
 \end{multicols}
 

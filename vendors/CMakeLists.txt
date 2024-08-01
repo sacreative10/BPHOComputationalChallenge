@@ -24,3 +24,9 @@ FetchContent_Declare(
         GIT_TAG 2.6.x
 )
 add_subdirectory(imgui-sfml)
+
+FetchContent_Declare(
+        glm
+        GIT_REPOSITORY https://github.com/g-truc/glm
+)
+FetchContent_MakeAvailable(glm)

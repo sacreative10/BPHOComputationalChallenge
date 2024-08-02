@@ -805,7 +805,52 @@ void challenge9(sf::RenderWindow& window) {
     }
   }
 
+  std::vector<point> cartesian_points;
+  dtCounter = 0;
+  dt = 0.01;
+  theta = launchAngle * 3.14159f / 180.f;
+
+  velX = std::cos(theta) * launchSpeed;
+  velY = std::sin(theta) * launchSpeed;
+  vel = launchSpeed;
+
+  posX = Y_AXIS_OFFSET;
+  posY = launchHeight + X_AXIS_OFFSET;
+
+  accX = 0;
+  accY = -strengthOfGravity;
+  while (posY >=Y_AXIS_OFFSET){
+    posX += velX * dt;
+    posY += velY * dt - 0.5f * dt * dt * strengthOfGravity;
+
+    velX += accX * dt;
+    velY += accY * dt;
+    vel = sqrt(velX * velX + velY * velY);
+
+    dtCounter ++;
+
+    switch(plotToggle){
+      case 0:
+        cartesian_points.push_back({posX, posY});
+        break;
+      case 1:
+        cartesian_points.push_back({dtCounter+X_AXIS_OFFSET, posY});
+        break;
+      case 2:
+        cartesian_points.push_back({dtCounter+X_AXIS_OFFSET, velX+Y_AXIS_OFFSET});
+        break;
+      case 3:
+        cartesian_points.push_back({dtCounter+X_AXIS_OFFSET, velY+Y_AXIS_OFFSET});
+        break;
+      case 4:
+        cartesian_points.push_back({dtCounter+X_AXIS_OFFSET, vel+Y_AXIS_OFFSET});
+        break;
+    }
+  
+  }
+
   drawPoints(window, points);
+  drawPoints(window, cartesian_points, sf::Color::Red);
 }
 
 

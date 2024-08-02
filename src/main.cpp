@@ -1,6 +1,7 @@
 #include <imgui-SFML.h>
 #include <imgui.h>
 #include <math.h>
+#include <iostream>
 
 #include <SFML/Graphics/RenderWindow.hpp>
 #include <SFML/System/Clock.hpp>
@@ -717,8 +718,8 @@ std::vector<point> challenge8computation(sf::RenderWindow& window) {
 }
 
 void controlPanel9(float *launchSpeed, float *launchHeight, float *launchAngle,
-                   float *strengthOfGravity, float *dragCoeef, float *crossA, float* airDensity, float* objectMass) {
-  ImGui::Begin("Challenge 8");
+                   float *strengthOfGravity, float *dragCoeef, float *crossA, float* airDensity, float* objectMass, int *plotToggle) {
+  ImGui::Begin("Challenge 9");
   ImGui::SliderFloat("Launch Speed", launchSpeed, 0.f, 1000.f);
   ImGui::SliderFloat("Launch Height", launchHeight, 0.f, (float)RENDER_HEIGHT);
   ImGui::SliderFloat("Launch Angle", launchAngle, 0.f, 90.f);
@@ -727,12 +728,16 @@ void controlPanel9(float *launchSpeed, float *launchHeight, float *launchAngle,
   ImGui::SliderFloat("Cross Area", crossA, 0.f, 1.f);
   ImGui::SliderFloat("Air Density", airDensity, 0.f, 10.f);
   ImGui::SliderFloat("Object Mass", objectMass, 0.f, 90.f);
-
-
+  ImGui::SliderInt("Plot Toggle", plotToggle, 0, 4);
+  ImGui::Text("Plot Toggle Information:");
+  ImGui::Text("0: Vertical vs Horizontal Displacement");
+  ImGui::Text("1: Vertical Displacement vs Time");
+  ImGui::Text("2: Horizontal velocity vs Time");
+  ImGui::Text("3: Vertical velocity vs Time");
+  ImGui::Text("4: Overall Velocity vs Time");
   ImGui::End();
 }
 void challenge9(sf::RenderWindow& window) {
-
   static float launchSpeed = 20;
   static float launchHeight = 20;
   static float launchAngle = 45;
@@ -741,10 +746,11 @@ void challenge9(sf::RenderWindow& window) {
   static float crossArea = 0.1f;
   static float airDensity = 1.f;
   static float objectMass = 0.1f;
+  static int plotToggle = 0;
 
 
   controlPanel9(&launchSpeed, &launchHeight,
-                &launchAngle, &strengthOfGravity, &dragCoeff, &crossArea, &airDensity, &objectMass);
+                &launchAngle, &strengthOfGravity, &dragCoeff, &crossArea, &airDensity, &objectMass, &plotToggle);
 
   std::vector<point> points;
 
@@ -762,12 +768,12 @@ void challenge9(sf::RenderWindow& window) {
 
   float accX = -velX / vel * k * vel * vel;
   float accY = -strengthOfGravity -velY / vel * k * vel * vel;
-
+  int dtCounter = 0;
 
 
   while (posY >= X_AXIS_OFFSET)
   {
-
+  
     posX += velX * dt;
     posY += velY * dt - 0.5f * dt * dt * strengthOfGravity;
 
@@ -778,8 +784,25 @@ void challenge9(sf::RenderWindow& window) {
 
     accX = -(velX / vel) * k * vel * vel;
     accY = -strengthOfGravity - (velY / vel) * k * vel * vel;
+    dtCounter ++;
 
-    points.push_back({posX, posY});
+    switch(plotToggle){
+      case 0:
+        points.push_back({posX, posY});
+        break;
+      case 1:
+        points.push_back({dtCounter+X_AXIS_OFFSET, posY});
+        break;
+      case 2:
+        points.push_back({dtCounter+X_AXIS_OFFSET, velX+Y_AXIS_OFFSET});
+        break;
+      case 3:
+        points.push_back({dtCounter+X_AXIS_OFFSET, velY+Y_AXIS_OFFSET});
+        break;
+      case 4:
+        points.push_back({dtCounter+X_AXIS_OFFSET, vel+Y_AXIS_OFFSET});
+        break;
+    }
   }
 
   drawPoints(window, points);

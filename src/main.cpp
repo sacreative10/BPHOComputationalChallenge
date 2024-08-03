@@ -195,20 +195,20 @@ struct cameraSettingsStruct {
 void drawPointOnEarth(sf::RenderWindow& window, float lat, float lon,
                       float radius, glm::mat4 mvp) {
   glm::vec3 point;
-  auto phi = glm::radians(lat);
-  auto theta = glm::radians(lon);
+  auto phi = glm::radians(-lon);
+  auto theta = glm::radians(lat);
 
-  // phi -> latitude
-  // theta -> longitude
+  // phi -> longitude
+  // theta -> latitude
 
-  point.x = radius * std::cos(phi) * std::cos(theta);
-  point.y = radius * std::cos(phi) * std::sin(theta);
-  point.z = radius * std::sin(phi);
+  point.x = radius * std::cos(theta) * std::cos(phi);
+  point.y = radius * std::sin(theta);
+  point.z = radius * std::cos(theta) * std::sin(phi);
 
   point = mvp * glm::vec4(point, 1.0f);
 
   point.x = (point.x + 1.0f) * 0.5f * RENDER_WIDTH;
-  point.y = (-point.y + 1.0f) * 0.5f * RENDER_HEIGHT;
+  point.y = (point.y + 1.0f) * 0.5f * RENDER_HEIGHT;
 
   sf::CircleShape circle(2);
   circle.setPosition(point.x, point.y);
@@ -238,7 +238,7 @@ int main() {
 
   glm::mat4 modelMatrix =
       glm::scale(glm::mat4(1.f), glm::vec3(modelSettings.scale)) *
-      glm::rotate(glm::mat4(1.f), glm::radians(1s0.f), glm::vec3(1, 0, 0)) *
+      glm::rotate(glm::mat4(1.f), glm::radians(180.f), glm::vec3(1, 0, 0)) *
       glm::translate(glm::mat4(1.f), modelSettings.modelPos);
   glm::mat4 mvp = projectionMatrix * viewMatrix * modelMatrix;
 

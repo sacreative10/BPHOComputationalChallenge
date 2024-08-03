@@ -24,6 +24,8 @@
 #define X_AXIS_OFFSET 20
 #define Y_AXIS_OFFSET 20
 
+// TODO: FIX THE EARTHMAP TEXTURE FINDING
+
 struct point {
   float x;
   float y;
@@ -101,11 +103,15 @@ point getUV(glm::vec3& p) {
   return point{phi / (2 * glm::pi<float>()), theta / glm::pi<float>()};
 }
 
-float averageDepth(const glm::mat4& mvp, const triangle& tri) {
-  glm::vec4 p1 = mvp * glm::vec4(tri.p1, 1.0f);
-  glm::vec4 p2 = mvp * glm::vec4(tri.p2, 1.0f);
-  glm::vec4 p3 = mvp * glm::vec4(tri.p3, 1.0f);
-  return (p1.z + p2.z + p3.z) / 3.0f;
+// float averageDepth(const glm::mat4& mvp, const triangle& tri) {
+//   glm::vec4 p1 = mvp * glm::vec4(tri.p1, 1.0f);
+//   glm::vec4 p2 = mvp * glm::vec4(tri.p2, 1.0f);
+//   glm::vec4 p3 = mvp * glm::vec4(tri.p3, 1.0f);
+//   return (p1.z + p2.z + p3.z) / 3.0f;
+// }
+
+float averageDepth(const triangle& tri) {
+  return (tri.p1.z + tri.p2.z + tri.p3.z) / 3.0f;
 }
 
 struct depthPair {
@@ -123,7 +129,7 @@ void drawPolygon(sf::RenderWindow& window, glm::mat4& mvp,
 
   std::vector<depthPair> depthPairs = std::vector<depthPair>(triangles.size());
   for (int i = 0; i < triangles.size(); i++) {
-    depthPairs[i] = depthPair{averageDepth(mvp, triangles[i]), i};
+    depthPairs[i] = depthPair{averageDepth(computedMesh[i]), i};
   }
 
   // sort by depth
@@ -135,21 +141,26 @@ void drawPolygon(sf::RenderWindow& window, glm::mat4& mvp,
     glm::vec3 p2 = computedMesh[depthPairs[i].index].p2;
     glm::vec3 p3 = computedMesh[depthPairs[i].index].p3;
 
+    // p1 /= p1.z;
+    // p2 /= p2.z;
+    // p3 /= p3.z;
+
     // translate to screen space
     p1.x = (p1.x + 1.0f) * 0.5f * RENDER_WIDTH;
-    p1.y = (p1.y + 1.0f) * 0.5f * RENDER_HEIGHT;
+    p1.y = (-p1.y + 1.0f) * 0.5f * RENDER_HEIGHT;
 
     p2.x = (p2.x + 1.0f) * 0.5f * RENDER_WIDTH;
-    p2.y = (p2.y + 1.0f) * 0.5f * RENDER_HEIGHT;
+    p2.y = (-p2.y + 1.0f) * 0.5f * RENDER_HEIGHT;
 
     p3.x = (p3.x + 1.0f) * 0.5f * RENDER_WIDTH;
-    p3.y = (p3.y + 1.0f) * 0.5f * RENDER_HEIGHT;
+    p3.y = (-p3.y + 1.0f) * 0.5f * RENDER_HEIGHT;
 
     std::vector<sf::Vertex> verts;
-    verts.push_back(sf::Vertex(sf::Vector2f(p1.x, p1.y)));
-    verts.push_back(sf::Vertex(sf::Vector2f(p2.x, p2.y)));
-    verts.push_back(sf::Vertex(sf::Vector2f(p3.x, p3.y)));
-    verts.push_back(sf::Vertex(sf::Vector2f(p1.x, p1.y)));
+    verts.reserve(4);
+    verts.emplace_back(sf::Vector2f(p1.x, p1.y));
+    verts.emplace_back(sf::Vector2f(p2.x, p2.y));
+    verts.emplace_back(sf::Vector2f(p3.x, p3.y));
+    verts.emplace_back(sf::Vector2f(p1.x, p1.y));
 
     // texture coordinates
     auto tri = triangles[depthPairs[i].index];
@@ -157,11 +168,11 @@ void drawPolygon(sf::RenderWindow& window, glm::mat4& mvp,
     auto uv2 = getUV(tri.p2);
     auto uv3 = getUV(tri.p3);
 
-    verts[0].texCoords = sf::Vector2f((1 - uv1.x) * texture.getSize().x,
+    verts[0].texCoords = sf::Vector2f((uv1.x) * texture.getSize().x,
                                       (uv1.y) * texture.getSize().y);
-    verts[1].texCoords = sf::Vector2f((1 - uv2.x) * texture.getSize().x,
+    verts[1].texCoords = sf::Vector2f((uv2.x) * texture.getSize().x,
                                       (uv2.y) * texture.getSize().y);
-    verts[2].texCoords = sf::Vector2f((1 - uv3.x) * texture.getSize().x,
+    verts[2].texCoords = sf::Vector2f((uv3.x) * texture.getSize().x,
                                       (uv3.y) * texture.getSize().y);
 
     window.draw(verts.data(), verts.size(), sf::Triangles, &texture);
@@ -173,7 +184,7 @@ struct modelSettingsStruct {
   float rotateAngle = 0.00f;
   int depth = 5;
   float radius = 10.0f;
-  float scale = 0.08f;
+  float scale = 0.1f;
 };
 
 struct cameraSettingsStruct {
@@ -181,30 +192,23 @@ struct cameraSettingsStruct {
   glm::vec3 lookingAt = glm::vec3(0, 0, 0);
 };
 
-glm::vec3 thetaPhiToCartesian(float theta, float phi, float rad) {
-  float x = rad * std::cos(phi) * std::cos(theta);
-  float y = rad * std::cos(phi) * std::sin(theta);
-  float z = rad * std::sin(phi);
-
-  return glm::vec3(x, y, z);
-}
 void drawPointOnEarth(sf::RenderWindow& window, float lat, float lon,
                       float radius, glm::mat4 mvp) {
   glm::vec3 point;
-  lat = glm::radians(lat);
-  lon = glm::radians(lon);
+  auto phi = glm::radians(lat);
+  auto theta = glm::radians(lon);
 
   // phi -> latitude
   // theta -> longitude
 
-  point.x = radius * std::cos(lat) * std::cos(lon);
-  point.y = radius * std::cos(lat) * std::sin(lon);
-  point.z = radius * std::sin(lat);
+  point.x = radius * std::cos(phi) * std::cos(theta);
+  point.y = radius * std::cos(phi) * std::sin(theta);
+  point.z = radius * std::sin(phi);
 
   point = mvp * glm::vec4(point, 1.0f);
 
   point.x = (point.x + 1.0f) * 0.5f * RENDER_WIDTH;
-  point.y = (point.y + 1.0f) * 0.5f * RENDER_HEIGHT;
+  point.y = (-point.y + 1.0f) * 0.5f * RENDER_HEIGHT;
 
   sf::CircleShape circle(2);
   circle.setPosition(point.x, point.y);
@@ -233,9 +237,8 @@ int main() {
       cameraSettings.cameraPos, cameraSettings.lookingAt, glm::vec3(0, 1, 0));
 
   glm::mat4 modelMatrix =
-      glm::scale(glm::mat4(1.f),
-                 glm::vec3(modelSettings.scale, modelSettings.scale,
-                           modelSettings.scale)) *
+      glm::scale(glm::mat4(1.f), glm::vec3(modelSettings.scale)) *
+      glm::rotate(glm::mat4(1.f), glm::radians(1s0.f), glm::vec3(1, 0, 0)) *
       glm::translate(glm::mat4(1.f), modelSettings.modelPos);
   glm::mat4 mvp = projectionMatrix * viewMatrix * modelMatrix;
 
@@ -291,8 +294,8 @@ int main() {
     ImGui::End();
 
     ImGui::Begin("Launch Control");
-    ImGui::SliderFloat("Longtitude", &lon, -90, 90);
-    ImGui::SliderFloat("Latitude", &lat, -180, 180);
+    ImGui::SliderFloat("Latitude", &lat, -90, 90);
+    ImGui::SliderFloat("Longtitude", &lon, -180, 180);
 
     ImGui::End();
 

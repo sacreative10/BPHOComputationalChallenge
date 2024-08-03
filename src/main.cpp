@@ -12,6 +12,7 @@
 #define GLM_FORCE_INTRINSICS
 #include <algorithm>
 #include <execution>
+#include <future>
 
 #include "SFML/Graphics/CircleShape.hpp"
 #include "SFML/Graphics/RenderTexture.hpp"
@@ -192,18 +193,36 @@ struct cameraSettingsStruct {
   glm::vec3 lookingAt = glm::vec3(0, 0, 0);
 };
 
-void drawPointOnEarth(sf::RenderWindow& window, float lat, float lon,
-                      float radius, glm::mat4 mvp) {
+struct launchControl {
+  glm::vec2 launchLatLon = glm::vec2(0, 0);
+  float launchAngle = 0.0f;  // measured in degrees from the north pole (.i.e.
+                             // the positive y axis)
+  float elevationAngle = 0.0f;
+  float launchVelocity = 0.0f;
+  float radius = 0.0f;
+  float bigG = 0.0000000000667f;
+
+  bool isLaunched = false;
+};
+
+glm::vec3 getCartesian(float lat, float lon, float radius) {
   glm::vec3 point;
   auto phi = glm::radians(-lon);
   auto theta = glm::radians(lat);
 
-  // phi -> longitude
+  // phi -> longtitude
   // theta -> latitude
 
   point.x = radius * std::cos(theta) * std::cos(phi);
   point.y = radius * std::sin(theta);
-  point.z = radius * std::cos(theta) * std::sin(phi);
+  point.z = radius * std::sin(phi) * std::cos(theta);
+
+  return point;
+}
+
+void drawPointOnEarth(sf::RenderWindow& window, float lat, float lon,
+                      float radius, glm::mat4 mvp) {
+  auto point = getCartesian(lat, lon, radius);
 
   point = mvp * glm::vec4(point, 1.0f);
 
@@ -214,6 +233,78 @@ void drawPointOnEarth(sf::RenderWindow& window, float lat, float lon,
   circle.setPosition(point.x, point.y);
   circle.setFillColor(sf::Color::Red);
   window.draw(circle);
+}
+
+std::vector<glm::vec3> getProjectileArc(launchControl launchControlSettings) {
+  std::vector<glm::vec3> points;
+  // get starting location
+  glm::vec3 startingLocation = getCartesian(
+      launchControlSettings.launchLatLon.x,
+      launchControlSettings.launchLatLon.y, launchControlSettings.radius);
+
+  glm::vec3 xyzPosition = startingLocation;
+
+  // Basically, we create a sphere of possibility around the point of the earth
+  // think of a las vegas sphere around the point of where we throw the ball
+
+  // x y z components of the velocity vector would be
+  glm::vec3 xyzVelocity = getCartesian(launchControlSettings.elevationAngle,
+                                       launchControlSettings.launchAngle,
+                                       launchControlSettings.launchVelocity);
+
+  // Acceleration is calculated by working out which component of the velocity
+  // will be affected the most of immediate effect of gravity
+  // by calculating the normaised difference between the position and the center
+  // of the earth
+
+  // planet mass is scaled
+  float planetMass = 5.972f * 1000000000000000000000000000000.0f;
+  float planetRadius = 6371.0f;
+
+  float scaleFactor = launchControlSettings.radius / planetRadius;
+  float scaledMass = planetMass * scaleFactor;
+
+  // in the beginning, the acceleration is just the gravitational acceleration
+  float g = 9.81;
+
+  glm::vec3 difference = glm::normalize(xyzPosition);
+  glm::vec3 acceleration = -g * difference;
+
+  float dt = 0.1f;
+  while (glm::distance(glm::vec3(0, 0, 0), xyzPosition) >=
+         launchControlSettings.radius) {
+    // update our position
+    xyzPosition += xyzVelocity * dt + 0.5f * acceleration * dt * dt;
+
+    // update our velocity
+    xyzVelocity += acceleration * dt;
+
+    // update our acceleration
+    difference = glm::normalize(xyzPosition);
+    g = 9.81;
+
+    acceleration = -g * difference;
+
+    points.push_back(xyzPosition);
+  }
+
+  return points;
+}
+
+void drawProjectileArc(sf::RenderWindow& window, glm::mat4 mvp,
+                       std::vector<glm::vec3>& points) {
+  auto copy = points;
+  for (auto& point : copy) {
+    point = mvp * glm::vec4(point, 1.0f);
+
+    point.x = (point.x + 1.0f) * 0.5f * RENDER_WIDTH;
+    point.y = (point.y + 1.0f) * 0.5f * RENDER_HEIGHT;
+
+    sf::CircleShape circle(2);
+    circle.setFillColor(sf::Color::Red);
+    circle.setPosition(point.x, point.y);
+    window.draw(circle);
+  }
 }
 
 int main() {
@@ -249,8 +340,9 @@ int main() {
   normaliseWithRespectToLength(mesh, glm::vec3{0, 0, 0}, modelSettings.radius,
                                1.f);
 
-  float lat = -28.37;
-  float lon = 77;
+  launchControl launchControlSettings;
+  launchControlSettings.radius = modelSettings.radius;
+  auto points = std::vector<glm::vec3>();
 
   glEnable(GL_DEPTH_TEST);
   glDepthMask(GL_TRUE);
@@ -294,8 +386,22 @@ int main() {
     ImGui::End();
 
     ImGui::Begin("Launch Control");
-    ImGui::SliderFloat("Latitude", &lat, -90, 90);
-    ImGui::SliderFloat("Longtitude", &lon, -180, 180);
+    ImGui::SliderFloat("Latitude", &launchControlSettings.launchLatLon.x, -90,
+                       90);
+    ImGui::SliderFloat("Longtitude", &launchControlSettings.launchLatLon.y,
+                       -180, 180);
+
+    ImGui::SliderFloat("Launch Velocity", &launchControlSettings.launchVelocity,
+                       0.0f, 10000.0f);
+
+    ImGui::SliderFloat("Launch Angle", &launchControlSettings.launchAngle, 0.0f,
+                       360.0f);
+    ImGui::SliderFloat("Elevation Angle", &launchControlSettings.elevationAngle,
+                       0.0f, 90.0f);
+
+    if (ImGui::Button("Launch!")) {
+      launchControlSettings.isLaunched = true;
+    }
 
     ImGui::End();
 
@@ -313,8 +419,18 @@ int main() {
 
     window.clear();
 
+    glm::vec3 temp;
+
     drawPolygon(window, mvp, mesh, texture);
-    drawPointOnEarth(window, lat, lon, modelSettings.radius, mvp);
+    drawPointOnEarth(window, launchControlSettings.launchLatLon.x,
+                     launchControlSettings.launchLatLon.y, modelSettings.radius,
+                     mvp);
+
+    if (launchControlSettings.isLaunched) {
+      points = getProjectileArc(launchControlSettings);
+      launchControlSettings.isLaunched = false;
+    }
+    drawProjectileArc(window, mvp, points);
     ImGui::SFML::Render(window);
 
     window.display();

@@ -16,6 +16,7 @@
 #define X_AXIS_OFFSET 20
 #define Y_AXIS_OFFSET 20
 
+//
 struct point {
   float x;
   float y;

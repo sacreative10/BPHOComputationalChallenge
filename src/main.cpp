@@ -219,6 +219,17 @@ glm::vec3 getCartesian(float lat, float lon, float radius) {
   return point;
 }
 
+glm::vec3 getSpherical(glm::vec3 currentPos, float angularVel, float dt, int pointIndex){
+
+  float length = glm::length(currentPos);
+  currentPos = glm::normalize(currentPos);
+  float theta = std::acos(-currentPos.y) - glm::pi<float>()/2.f;
+  float phi = std::atan2(-currentPos.z, currentPos.x);
+  phi += angularVel * dt * pointIndex;
+  return getCartesian(glm::degrees(theta), glm::degrees(phi), 1) * length;
+}
+
+
 void drawPointOnEarth(sf::RenderWindow& window, float lat, float lon,
                       float radius, glm::mat4 mvp) {
   auto point = getCartesian(lat, lon, radius);
@@ -320,10 +331,13 @@ std::vector<glm::vec3> getProjectileArc(launchControl launchControlSettings) {
   int numPoints = 0;
   int maxPoints = 1000;
 
+  float angularVel = 0.001f;
   float dt = 0.001f;
   while (glm::distance(glm::vec3(0, 0, 0), xyzPosition) >= launchControlSettings.radius && numPoints < maxPoints) {
     // update our position
     xyzPosition += xyzVelocity * dt + 0.5f * acceleration * dt * dt;
+    
+    xyzPosition = getSpherical(xyzPosition, angularVel, dt, numPoints);
 
     // update our velocity
     xyzVelocity += acceleration * dt;

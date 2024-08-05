@@ -254,13 +254,35 @@ glm::vec3 getCartesianForProjectile(float theta, float phi, float radius, glm::v
                 (1 - std::cos(rotTheta)) * glm::matrixCompMult(K, K);
 
   glm::vec3 pointOnSphere;
-  pointOnSphere.x = radius * std::cos(theta_rad) * std::cos(phi_rad);
-  pointOnSphere.y = radius * std::cos(theta_rad) * std::sin(phi_rad);
-  pointOnSphere.z = radius * std::sin(theta_rad);
+  pointOnSphere.x = radius * std::sin(theta_rad) * std::cos(phi_rad);
+  pointOnSphere.y = radius * std::sin(theta_rad) * std::sin(phi_rad);
+  pointOnSphere.z = radius * std::cos(theta_rad);
 
   return R * pointOnSphere;
 }
 
+
+// assumes v1 is normalised
+void createCoordinateSystem(glm::vec3& v1, glm::vec3* v2, glm::vec3* v3) {
+  *v2 = glm::vec3(-v1.z, 0, v1.x) / std::sqrt(v1.x * v1.x + v1.z * v1.z);
+
+  *v3 = glm::cross(v1, *v2);
+}
+
+glm::vec3 workoutVelocityVector(float launchAngle, float elevationAngle, float launchVelocity, glm::vec3 xyzPosition) {
+  glm::vec3 v2 = glm::vec3(0, 0, 0);
+  glm::vec3 v3 = glm::vec3(0, 0, 0);
+
+  createCoordinateSystem(xyzPosition, &v2, &v3);
+
+  float v1component = launchVelocity * std::sin(glm::radians(elevationAngle));
+  float v2component = launchVelocity * std::cos(glm::radians(elevationAngle)) * std::cos(glm::radians(launchAngle));
+  float v3component = launchVelocity * std::cos(glm::radians(elevationAngle)) * std::sin(glm::radians(launchAngle));
+
+  glm::vec3 velocityVector = (v1component * xyzPosition) + (v2component * v2) + (v3component * v3);
+
+  return velocityVector;
+}
 
 std::vector<glm::vec3> getProjectileArc(launchControl launchControlSettings) {
   std::vector<glm::vec3> points;
@@ -275,9 +297,9 @@ std::vector<glm::vec3> getProjectileArc(launchControl launchControlSettings) {
   // think of a las vegas sphere around the point of where we throw the ball
 
   // x y z components of the velocity vector would be
-  glm::vec3 xyzVelocity = getCartesian(launchControlSettings.elevationAngle,
-                                       launchControlSettings.launchAngle,
-                                       launchControlSettings.launchVelocity);
+  glm::vec3 xyzVelocity = workoutVelocityVector(launchControlSettings.launchAngle,
+                                       launchControlSettings.elevationAngle,
+                                       launchControlSettings.launchVelocity, glm::normalize(xyzPosition));
 
 
   // Acceleration is calculated by working out which component of the velocity

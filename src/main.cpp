@@ -1,11 +1,11 @@
 #include <imgui-SFML.h>
 #include <imgui.h>
-#include <math.h>
 
 #include <SFML/Graphics/RenderWindow.hpp>
 #include <SFML/OpenGL.hpp>
 #include <SFML/System/Clock.hpp>
 #include <SFML/Window/Event.hpp>
+#include <cmath>
 #include <vector>
 
 #define GLM_FORCE_SWIZZLE
@@ -120,8 +120,8 @@ struct depthPair {
   int index;
 };
 
-void drawPolygon(sf::RenderWindow& window, glm::mat4& mvp,
-                 std::vector<triangle>& triangles, sf::Texture texture) {
+void drawPolygons(sf::RenderWindow& window, glm::mat4& mvp,
+                 std::vector<triangle>& triangles, sf::Texture* texture) {
   auto computedMesh = triangles;
   for (auto& tri : computedMesh) {
     tri = triangle{mvp * glm::vec4(tri.p1, 1.0f), mvp * glm::vec4(tri.p2, 1.0f),
@@ -141,10 +141,6 @@ void drawPolygon(sf::RenderWindow& window, glm::mat4& mvp,
     glm::vec3 p1 = computedMesh[depthPairs[i].index].p1;
     glm::vec3 p2 = computedMesh[depthPairs[i].index].p2;
     glm::vec3 p3 = computedMesh[depthPairs[i].index].p3;
-
-    // p1 /= p1.z;
-    // p2 /= p2.z;
-    // p3 /= p3.z;
 
     // translate to screen space
     p1.x = (p1.x + 1.0f) * 0.5f * RENDER_WIDTH;
@@ -169,14 +165,17 @@ void drawPolygon(sf::RenderWindow& window, glm::mat4& mvp,
     auto uv2 = getUV(tri.p2);
     auto uv3 = getUV(tri.p3);
 
-    verts[0].texCoords = sf::Vector2f((uv1.x) * texture.getSize().x,
-                                      (uv1.y) * texture.getSize().y);
-    verts[1].texCoords = sf::Vector2f((uv2.x) * texture.getSize().x,
-                                      (uv2.y) * texture.getSize().y);
-    verts[2].texCoords = sf::Vector2f((uv3.x) * texture.getSize().x,
-                                      (uv3.y) * texture.getSize().y);
+    verts[0].texCoords = sf::Vector2f((uv1.x) * texture->getSize().x,
+                                      (uv1.y) * texture->getSize().y);
+    verts[1].texCoords = sf::Vector2f((uv2.x) * texture->getSize().x,
+                                      (uv2.y) * texture->getSize().y);
+    verts[2].texCoords = sf::Vector2f((uv3.x) * texture->getSize().x,
+                                      (uv3.y) * texture->getSize().y);
 
-    window.draw(verts.data(), verts.size(), sf::Triangles, &texture);
+    // Render texture
+    window.draw(verts.data(), verts.size(), sf::Triangles, texture);
+    // Render wireframe
+    // window.draw(verts.data(), verts.size(), sf::Lines);
   };
 }
 
@@ -200,7 +199,7 @@ struct launchControl {
   float elevationAngle = 0.0f;
   float launchVelocity = 0.0f;
   float radius = 0.0f;
-  float bigG = 0.0000000000667f;
+  float bigG = 6.67430f * std::pow(10, -10);
 
   bool isLaunched = false;
 };
@@ -229,11 +228,39 @@ void drawPointOnEarth(sf::RenderWindow& window, float lat, float lon,
   point.x = (point.x + 1.0f) * 0.5f * RENDER_WIDTH;
   point.y = (point.y + 1.0f) * 0.5f * RENDER_HEIGHT;
 
+
   sf::CircleShape circle(2);
   circle.setPosition(point.x, point.y);
-  circle.setFillColor(sf::Color::Red);
+  if (point.z > 4.8) {
+    circle.setFillColor(sf::Color::Red);
+  } else {
+    circle.setFillColor(sf::Color::Magenta);
+  }
   window.draw(circle);
 }
+
+
+glm::vec3 getCartesianForProjectile(float theta, float phi, float radius, glm::vec3 up) {
+  float theta_rad = glm::radians(theta);
+  float phi_rad = glm::radians(phi);
+
+  // Rodrieguez rotation formula
+  glm::vec3 k = glm::normalize(glm::cross(up, glm::vec3(0, 0, 1)));
+  float rotTheta = std::acos(glm::dot(up, glm::vec3(0, 0, 1)));
+
+  glm::mat3 K = glm::mat3(0, -k.z, k.y, k.z, 0, -k.x, -k.y, k.x, 0);
+
+  glm::mat3 R = glm::mat3(1) + std::sin(rotTheta) * K +
+                (1 - std::cos(rotTheta)) * glm::matrixCompMult(K, K);
+
+  glm::vec3 pointOnSphere;
+  pointOnSphere.x = radius * std::cos(theta_rad) * std::cos(phi_rad);
+  pointOnSphere.y = radius * std::cos(theta_rad) * std::sin(phi_rad);
+  pointOnSphere.z = radius * std::sin(theta_rad);
+
+  return R * pointOnSphere;
+}
+
 
 std::vector<glm::vec3> getProjectileArc(launchControl launchControlSettings) {
   std::vector<glm::vec3> points;
@@ -252,27 +279,27 @@ std::vector<glm::vec3> getProjectileArc(launchControl launchControlSettings) {
                                        launchControlSettings.launchAngle,
                                        launchControlSettings.launchVelocity);
 
+
   // Acceleration is calculated by working out which component of the velocity
   // will be affected the most of immediate effect of gravity
   // by calculating the normaised difference between the position and the center
   // of the earth
 
   // planet mass is scaled
-  float planetMass = 5.972f * 1000000000000000000000000000000.0f;
-  float planetRadius = 6371.0f;
-
-  float scaleFactor = launchControlSettings.radius / planetRadius;
-  float scaledMass = planetMass * scaleFactor;
+  float planetMass = 1.46981 * std::pow(10, 13);
 
   // in the beginning, the acceleration is just the gravitational acceleration
-  float g = 9.81;
+  float g = launchControlSettings.bigG * planetMass /
+            (launchControlSettings.radius * launchControlSettings.radius);
 
   glm::vec3 difference = glm::normalize(xyzPosition);
   glm::vec3 acceleration = -g * difference;
 
-  float dt = 0.1f;
-  while (glm::distance(glm::vec3(0, 0, 0), xyzPosition) >=
-         launchControlSettings.radius) {
+  int numPoints = 0;
+  int maxPoints = 1000;
+
+  float dt = 0.001f;
+  while (glm::distance(glm::vec3(0, 0, 0), xyzPosition) >= launchControlSettings.radius && numPoints < maxPoints) {
     // update our position
     xyzPosition += xyzVelocity * dt + 0.5f * acceleration * dt * dt;
 
@@ -281,11 +308,15 @@ std::vector<glm::vec3> getProjectileArc(launchControl launchControlSettings) {
 
     // update our acceleration
     difference = glm::normalize(xyzPosition);
-    g = 9.81;
+
+    float distanceFromCenter = glm::distance(glm::vec3(0, 0, 0), xyzPosition);
+    g = launchControlSettings.bigG * planetMass /
+            (distanceFromCenter * distanceFromCenter);
 
     acceleration = -g * difference;
 
     points.push_back(xyzPosition);
+    numPoints++;
   }
 
   return points;
@@ -294,23 +325,32 @@ std::vector<glm::vec3> getProjectileArc(launchControl launchControlSettings) {
 void drawProjectileArc(sf::RenderWindow& window, glm::mat4 mvp,
                        std::vector<glm::vec3>& points) {
   auto copy = points;
+  sf::VertexArray lines(sf::LinesStrip, copy.size());
   for (auto& point : copy) {
-    point = mvp * glm::vec4(point, 1.0f);
+    glm::vec3 transformedPoint = mvp * glm::vec4(point, 1.0f);
 
-    point.x = (point.x + 1.0f) * 0.5f * RENDER_WIDTH;
-    point.y = (point.y + 1.0f) * 0.5f * RENDER_HEIGHT;
+    transformedPoint.x = (transformedPoint.x + 1.0f) * 0.5f * RENDER_WIDTH;
+    transformedPoint.y = (transformedPoint.y + 1.0f) * 0.5f * RENDER_HEIGHT;
+
+    lines.append(sf::Vertex(sf::Vector2f(transformedPoint.x, transformedPoint.y)));
 
     sf::CircleShape circle(2);
-    circle.setFillColor(sf::Color::Red);
-    circle.setPosition(point.x, point.y);
+    if (transformedPoint.z > 4.8) {
+      circle.setFillColor(sf::Color::Red);
+      lines[lines.getVertexCount() - 1].color = sf::Color::Red;
+    } else {
+      circle.setFillColor(sf::Color::Magenta);
+      lines[lines.getVertexCount() - 1].color = sf::Color::Magenta;
+    }
+    circle.setPosition(transformedPoint.x, transformedPoint.y);
     window.draw(circle);
   }
+  //window.draw(lines);
 }
 
 int main() {
   sf::ContextSettings settings;
   settings.antialiasingLevel = 8;
-  settings.depthBits = 24;
   sf::RenderWindow window(sf::VideoMode(RENDER_WIDTH, RENDER_HEIGHT),
                           "BPHO Computational Challenge", sf::Style::Default,
                           settings);
@@ -342,25 +382,23 @@ int main() {
 
   launchControl launchControlSettings;
   launchControlSettings.radius = modelSettings.radius;
-  auto points = std::vector<glm::vec3>();
 
-  glEnable(GL_DEPTH_TEST);
-  glDepthMask(GL_TRUE);
-  glClearDepth(1.f);
-  glDepthFunc(GL_LESS);
+  auto projectilePath = std::vector<glm::vec3>();
+
+
   sf::Clock deltaClock;
   while (window.isOpen()) {
     sf::Event event;
     static int targetX = X_AXIS_OFFSET + 100;
     static int targetY = Y_AXIS_OFFSET + 100;
     while (window.pollEvent(event)) {
-      ImGui::SFML::ProcessEvent(event);
+      ImGui::SFML::ProcessEvent(window, event);
 
       if (event.type == sf::Event::Closed) {
         window.close();
       }
       if (event.type == sf::Event::KeyPressed) {
-        if (event.KeyPressed == sf::Keyboard::Escape) {
+        if (sf::Event::KeyPressed == sf::Keyboard::Escape) {
           window.close();
         }
       }
@@ -385,6 +423,7 @@ int main() {
     }
     ImGui::End();
 
+
     ImGui::Begin("Launch Control");
     ImGui::SliderFloat("Latitude", &launchControlSettings.launchLatLon.x, -90,
                        90);
@@ -392,12 +431,15 @@ int main() {
                        -180, 180);
 
     ImGui::SliderFloat("Launch Velocity", &launchControlSettings.launchVelocity,
-                       0.0f, 10000.0f);
+                       0.0f, 100.0f);
 
     ImGui::SliderFloat("Launch Angle", &launchControlSettings.launchAngle, 0.0f,
                        360.0f);
     ImGui::SliderFloat("Elevation Angle", &launchControlSettings.elevationAngle,
                        0.0f, 90.0f);
+
+    ImGui::Text("Number of Points %d", projectilePath.size());
+
 
     if (ImGui::Button("Launch!")) {
       launchControlSettings.isLaunched = true;
@@ -417,20 +459,18 @@ int main() {
 
     mvp = projectionMatrix * viewMatrix * modelMatrix;
 
-    window.clear();
+    window.clear(sf::Color::White);
 
-    glm::vec3 temp;
-
-    drawPolygon(window, mvp, mesh, texture);
+    drawPolygons(window, mvp, mesh, &texture);
     drawPointOnEarth(window, launchControlSettings.launchLatLon.x,
                      launchControlSettings.launchLatLon.y, modelSettings.radius,
                      mvp);
 
     if (launchControlSettings.isLaunched) {
-      points = getProjectileArc(launchControlSettings);
+      projectilePath = getProjectileArc(launchControlSettings);
       launchControlSettings.isLaunched = false;
     }
-    drawProjectileArc(window, mvp, points);
+    drawProjectileArc(window, mvp, projectilePath);
     ImGui::SFML::Render(window);
 
     window.display();

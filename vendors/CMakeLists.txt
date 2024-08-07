@@ -14,7 +14,7 @@ endif ()
 FetchContent_Declare(
         imgui
         GIT_REPOSITORY https://github.com/ocornut/imgui
-        GIT_TAG 527b2c45af2f8964f95826bd16ab7c7ed372ae41 # docking branch latest 04/07/24
+        GIT_TAG 7b6314f47d2aaa3758cfeeca66af34f5c9309ca4 # latest docking branch as of 07/08/24
 )
 FetchContent_MakeAvailable(imgui)
 

@@ -18,3 +18,9 @@ if(WIN32)
                 $<TARGET_FILE_DIR:BPHOComputationalChallenge>)
     endif()
 endif()
+
+# move the resources to the build directory
+add_custom_command(TARGET BPHOComputationalChallenge POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+        ${CMAKE_SOURCE_DIR}/resources
+        $<TARGET_FILE_DIR:BPHOComputationalChallenge>/resources)

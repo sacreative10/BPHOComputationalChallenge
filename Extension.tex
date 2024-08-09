@@ -101,11 +101,94 @@ The projection matrix converts the frustum of the camera to a cube, and then sca
 Once our coordinates have been projected onto the screen, we can then render them using SFML\@, this is done by creating a vertex array, and then
 filling it with the points we have projected onto the screen.
 \begin{lstlisting}
-#include <iostream>
-#include <SFML/Graphics.hpp>
-int main()
-{
-    std::cout << "Hello\n"; 
-}
+    <<Get UV coordinate for a point xyz>>
+   <<Rendering a Sphere>>=
+   <<Get subdivided octahedron>>
+   <<Map the octahedron onto a sphere>>
+
+   sf::Texture texture = sf::Texture();
+   for (int i = 0; i < triangles.size(); i++) {
+    glm::vec3 v1 = triangles[i].v1;
+    glm::vec3 v2 = triangles[i].v2;
+    glm::vec3 v3 = triangles[i].v3;
+    
+    glm::vec4 p1 = MVP * glm::vec4(v1, 1.0f);
+    glm::vec4 p2 = MVP * glm::vec4(v2, 1.0f);
+    glm::vec4 p3 = MVP * glm::vec4(v3, 1.0f);
+
+
+    sf::VertexArray triangle(sf::Triangles, 3);
+        triangle[0].position = sf::Vector2f(p1.x, p1.y);
+        triangle[1].position = sf::Vector2f(p2.x, p2.y);
+        triangle[2].position = sf::Vector2f(p3.x, p3.y);
+
+    <<Set UV coordinates>>
+        window.draw(triangle, &texture);
+   }
 \end{lstlisting}
+
+\subsubsection{Mapping a texture onto the sphere}
+After the arduous task of getting the triangles we want on to the screen, we can now move on to the task of mapping a texture onto the sphere. 
+To do so, we must introduce the idea of $uv$ coordinates. These coordinates specify the location of a 2D source image (or in some 2D parameterized space).
+We need to find a mapping of a point from a 3D surface (in this case of a sphere) onto $uv$ coordinates.
+
+$uv$ coordinates are defined in the range $[0, 1]$, where $u$ is the horizontal coordinate and $v$ is the vertical coordinate. Their range allows them to be used
+in any texture, regardless of size, since they are relative to the size of the texture.
+
+For spheres, surface coordinates are defined in terms of two angles $\theta$ and $\phi$, where $\theta$ measures the angle made between the $y$ axis and the point
+and $\phi$ is the angle about the $y$ axis\footnote{Annoyingly, many textbook definitions of $\phi$ and $\theta$ are not only swapped, but also the axes of measurement 
+are also changed, we consider the "poles" of our sphere to be the $y$ axis, however many textbooks consider the "poles" to be the $z$ axis, which ends up changing the equations in 
+a subtle, yet frustrating to debug manner.}.
+To begin with then\footnote{Assuming unit sphere}:
+\begin{align*}
+    y &= -\cos(\theta)\\
+    x &= -\cos(\phi)\sin(\phi)\\
+    z &= \sin(\phi)\sin(\theta)
+\end{align*}
+From this we can infer that:
+\begin{align*}
+    \theta &= \arccos(-y)\\
+    \phi &= \atantwo(z, -x)
+\end{align*}
+Where $\atantwo$ is the four-quadrant inverse tangent function. This returns values in the range $[-\pi, \pi]$, however these values go from
+$0$ to $\pi$, then flip to $-\pi$, proceeding back to $0$. While mathematically correct, this cannot be used to map $uv$ coordinate, since we want a smooth 
+transition from $0$ to $1$.
+
+Fortunately,
+\begin{align*}
+    \atantwo(a, b) &= atan2(-a, -b) + \pi
+\end{align*}
+
+This formulation gives values in the desired smooth range of $[0, 2\pi]$, therefore
+\begin{align*}
+    \phi &= \atantwo(z, -x) + \pi
+\end{align*}
+
+Since we have our $\theta$ and $\phi$ values, we can now convert them to $uv$ coordinates. This is done by:
+\begin{align*}
+    u &= \frac{\phi}{2\pi}\\
+    v &= \frac{\theta}{\pi}
+\end{align*}
+
+Now that we have our $uv$ coordinates, SFML provides a method of interpolation between these coordinates defined by the vertices of the triangles, so 
+we need not worry about the interpolation of the $uv$ coordinates:
+\begin{lstlisting}
+    <<Get UV coordinate for a point xyz>>=
+    glm::vec2 getUV(glm::vec3 xyz) {
+        float theta = acos(-xyz.y);
+        float phi = atan2(xyz.z, -xyz.x) + M_PI;
+        return glm::vec2(phi / (2 * M_PI), theta / M_PI);
+    }
+    <<Set UV coordinates>>=
+    glm::vec2 uv1 = getUV(v1);
+    glm::vec2 uv2 = getUV(v2);
+    glm::vec2 uv3 = getUV(v3);
+
+    triangle[0].texCoords = sf::Vector2f(uv1.x, uv1.y);
+    triangle[1].texCoords = sf::Vector2f(uv2.x, uv2.y);
+    triangle[2].texCoords = sf::Vector2f(uv3.x, uv3.y);
+
+\end{lstlisting}
+
+
 \end{document}

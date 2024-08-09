@@ -7,3 +7,4 @@ project(example
 set(CMAKE_USE_HOST_SFML OFF)
 add_subdirectory(vendors)
 add_subdirectory(src)
+

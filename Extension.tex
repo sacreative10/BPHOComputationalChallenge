@@ -67,7 +67,7 @@ Now that we have our points that we can render, we need to somehow convert these
 most of the heavy lifting, in that, we don't have to manually construct the equations to this, but can leave it up to GLM to do this for us. 
 \subsubsection*{The Rendering Pipeline}
 Throughout this procedure, we will be using 4D vectors ($x, y, z, w$), and 4$\times$4 matrices. The reason for this is that we can use the fourth dimension to store information
-about the vector. This being
+about the vector. I would recommend using \cite{EssenceLinearAlgebra} as a guide to further understanding the intricate process defined here. This being
 \begin{itemize}
     \item If $w = 0$, then the vector is a direction vector
     \item If $w = 1$, then the vector is a point
@@ -91,6 +91,5 @@ Whilst not practial in real life, the latter is easier and simpler in CG than th
 Intially, your camera is at the origin of the world space and
 you want to move your camera 3 units to the right, this would be equivalent of moving the entire world 3 units to the left instead.
 Mathematically, this is equivalent of describing everything in terms of the basis vectors defined relative to the camera,
-rather than in world space. This is the idea behind the view matrix; it is imperative to do this
-exercise  
+rather than in world space. This is the idea behind the view matrix;
 \end{document}

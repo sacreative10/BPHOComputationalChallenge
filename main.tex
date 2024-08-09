@@ -18,12 +18,16 @@
 \usepackage{listings}
 \usepackage{amsmath}
 \usepackage{graphicx}
+\graphicspath{{./images/}}
 \usepackage{biblatex}
+\usepackage{subfiles} % Best loaded last in the preamble
+
+
+
 \pgfplotsset{width=7cm, compat=1.9}
 \newlist{worddefs}{description}{1}
 \setlist[worddefs]{font=\bfseries, labelindent=\parindent, leftmargin=6em, style=sameline}
 \addbibresource{Library.bib}
-\bibliography{Library.bib}
 \title{\textbf{}}
 \author{A. Joshi and S. Alam}
 \date{}
@@ -37,11 +41,13 @@
 \begin{multicols}{2}
 
 
-\section{Introduction}
+\twocolumn
+% \section{Introduction}
 
-\section{Task by task breakdown}
+% \section{Task by task breakdown}
 
-\section{Intercontinental Projectile Modelling}
+% \section{Intercontinental Projectile Modelling}
+\subfile{Extension.tex}
 
 %tech - c++, imgui, sfml, *glm*
 %algorithms for challenges - inputs from imgui, process inputs, computation, *display (loop)*
@@ -49,7 +55,7 @@
 %Extension stuff
 %bibliography
 \newpage
-Hello my name is \cite{handout}
+
 \printbibliography
 
 

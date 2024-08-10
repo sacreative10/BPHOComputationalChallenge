@@ -2,11 +2,13 @@
 \begin{document} 
 \section{Tasks}
 \subsection{Task 1}
-We completed this task using a while loop. Our condition was while our current y-coordinate is above 0, we draw the points on screen. Within the loop, we solve for $x$ and $y$ through parametric equations in terms of $t$. Every iteration within the while loop, we add a timestep $dt = 0.01$ and, calculate the coordinates using suvat equations, namely $s_y = u tsin\theta  - 1/2 g t^2$ and $s_x = u cos\theta$, and then render a circle with these coordinates as the radius on screen.
+We completed this task using a while loop where our condition was while our current $y$-coordinate is above 0, we draw the points on screen. Within the loop, we solve for $x$ and $y$ through parametric equations in terms of $t$. Every iteration within the while loop, we add a timestep $dt = 0.01$ and, calculate the coordinates using suvat equations, namely $s_y = u t \sin\theta  - \dfrac{1}{2} g t^2$ and $s_x = u \cos\theta$, and then render a circle with these coordinates as the radius on screen.
 
 \subsection{Task 2}
-To get equally spaced x-coordinates whilst allowing the interative user to pick the number of points in their model, we calculate the range using $x_a = \frac{u^2}{g} sin\theta cos\theta$.
+To get equally spaced $x$-coordinates whilst allowing the interative user to pick the number of points in their model, we calculate the range using $R = \dfrac{u^2}{g}\left(\sin\theta \cos\theta + \cos \theta \sqrt{\sin^2 \theta + \dfrac{2gh}{u^2}}\right)$ \cite{brief}, given the initial interactive inputs using ImGui. We calculate one fractional unit of $x$ displacement by dividing the range $R$ by the number of points selected by the user using a slider. We then iterate over the number of points and to get the $x$-coordinate of that point, we multiply the range by the calculated fractional value and the current point index. This value for $x$ is plugged into $y = h + x\tan\theta -\dfrac{g}{2u^2}\left(1+\tan^2\theta\right)x^2$ \cite{brief} for every point. Finally, every coordinate is added to a vector in C++, which is returned to be iterated over and for points to be rendered at those locations on screen.
 
 
-Using the equations on the brief \cite{brief} for task 2,
+\noindent As this task forms the basis of much of the latter tasks, the above function was turned into a general-purpose function called \textbf{cartesianProjectile} taking launch angle, strength of gravity, launch speed, launch height and the number of points as arguments, creating a cartesian quadratic equation, and returning a vector which the desired number of points and coordinates.
+
+
 \end{document}

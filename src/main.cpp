@@ -9,6 +9,8 @@
 #include <vector>
 
 #include "SFML/Graphics/CircleShape.hpp"
+#include "SFML/Graphics/Font.hpp"
+#include "SFML/Graphics/Text.hpp"
 #include "SFML/Graphics/RenderTexture.hpp"
 #include "SFML/Graphics/Sprite.hpp"
 #include "SFML/Graphics/Texture.hpp"
@@ -136,7 +138,7 @@ void challenge1(sf::RenderWindow &window) {
 
   points.push_back({x * scale, y * scale});
 
-  while (y >= 0) {
+  while (y >= Y_AXIS_OFFSET) {
     t += timestep;
     x = X_AXIS_OFFSET + (ux * t * scale);
     y = Y_AXIS_OFFSET +
@@ -930,7 +932,7 @@ void challenge9(sf::RenderWindow& window) {
 
 
 
-void drawGrid(sf::RenderWindow &window) {
+void drawGrid(sf::RenderWindow &window, sf::Font& font) {
   // minor grid lines y axis
   for (int i = 0; i < RENDER_WIDTH; i += Y_AXIS_OFFSET) {
     sf::Vertex line[] = {
@@ -940,6 +942,26 @@ void drawGrid(sf::RenderWindow &window) {
     };
     window.draw(line, 2, sf::Lines);
   }
+
+  for(int i = Y_AXIS_OFFSET; i < RENDER_WIDTH; i += 100) {
+    sf::Text text;
+    text.setFont(font);
+    text.setString(std::to_string(i - Y_AXIS_OFFSET));
+    text.setCharacterSize(8);
+    text.setFillColor(sf::Color::White);
+    text.setPosition(i, RENDER_HEIGHT - 20);
+    window.draw(text);
+  }
+  for(int i = Y_AXIS_OFFSET; i < RENDER_WIDTH; i += 100) {
+    sf::Text text;
+    text.setFont(font);
+    text.setString(std::to_string(i - Y_AXIS_OFFSET));
+    text.setCharacterSize(8);
+    text.setFillColor(sf::Color::White);
+    text.setPosition(0, RENDER_HEIGHT - i);
+    window.draw(text);
+  }
+
 
   // minor grid lines x axis
   for (int i = 0; i < RENDER_HEIGHT; i += X_AXIS_OFFSET) {
@@ -968,6 +990,9 @@ int main() {
                           "BPHO Computational Challenge");
   window.setFramerateLimit(60);
   ImGui::SFML::Init(window, false);
+
+  sf::Font font;
+  font.loadFromFile("resources/JetBrainsMono-Medium.ttf");
 
   ImGuiIO& io = ImGui::GetIO();
   ImGui::CreateContext();
@@ -1019,7 +1044,7 @@ int main() {
     ImGui::SFML::Update(window, deltaClock.restart());
     window.clear();
 
-    drawGrid(window);
+    drawGrid(window, font);
 
 
 

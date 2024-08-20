@@ -10,5 +10,122 @@ To get equally spaced $x$-coordinates whilst allowing the interative user to pic
 
 \noindent As this task forms the basis of much of the latter tasks, the above function was turned into a general-purpose function called \textbf{cartesianProjectile} taking launch angle, strength of gravity, launch speed, launch height and the number of points as arguments, creating a cartesian quadratic equation, and returning a vector which the desired number of points and coordinates.
 
+\subsection{Task 3}
+The minimum speed needed to reach any point $X, Y$ is given by $u = \sqrt{g}\sqrt{Y + \sqrt{X^2 + Y^2}}$. This is calculated and set as the smallest value possible on the Launch Speed slider in the application. The angle needed to reach the selected point by the user on the screen $X, Y$ is calculated by $\theta = \tan^{-1}\left(\dfrac{Y + \sqrt{X^2 + Y^2}}{X}\right)$. Using cartesianProjectile, the path of the projectile can be plotted.
 
+\noindent High and low ball trajectory angles can be calculated for other values of Launch Speed using $Y = h + X\tan\theta -\dfrac{g}{2u^2}\left(1+\tan^2\theta \right)X^2$, where $\theta = \tan^{-1}\left(\dfrac{-b\pm\sqrt{b^2-4ac}}{2a}\right)$ and $a = \dfrac{g}{2u^2}X^2, b = -X, c = Y -h + \dfrac{gX^2}{2u^2}$. Then cartesianProjectile is called again with our Launch angle and Launch Speed values to plot the 2 paths in different colours, getting our 3 plots going through the desired point on screen.
+
+\subsection{Task 4}
+The current range, given any input for the initial conditions, can be calculated with $R = \dfrac{u^2}{g}\left(\sin\theta \cos\theta + \cos\theta\sqrt{\sin^2 \theta + \dfrac{2gh}{u^2}}\right)$. For any given initial Launch speed, height and strength of gravity, the max range $R_{max} = \dfrac{u^2}{g}\sqrt{1+\dfrac{2gh}{u^2}}$. The optimum angle i.e. the angle which achieves this trajectory is given by $\theta_{max} = \sin^{-1}\left(\dfrac{1}{\sqrt{2+\dfrac{2gh}{u^2}}} \right)$. cartesianProjectile then plots this path on the display screen with the intial condition inputs.
+%note h changes, easy change to implement
+
+\subsection{Task 5}
+This task is an amalgamation of Tasks 3 and 4 along with a bounding parabola. The coordinates points for the bounding parabola are generated in a similar manner to cartesianProjectile, except the equation used is $y=\dfrac{u^2}{2g} - \dfrac{g}{2u^2}x^2$ instead of $y = h + x\tan\theta -\dfrac{g}{2u^2}\left(1+\tan^2\theta\right)x^2$. The code for Tasks 3 and 4 is used in this task along with the function which generates plots for the bounding parabola. These are displayed together, with various colours acting as the key.
+
+\subsection{Task 6}
+As our model takes launch height into account, the equation which was used to calculate the distance travelled is $s = \dfrac{u^2}{g\left(1+\tan^2\theta\right)}\left[\frac{1}{2}\ln|\sqrt{1+z^2}+ z| + \frac{1}{2}z\sqrt{1+z^2}\right]$with $\tan \theta$ being the upper limit and $\tan\theta-\frac{gX}{u^2}(1+\tan^2\theta)$ being the lower limit where $z = \tan\theta - \dfrac{gx}{u^2}(1+\tan^2\theta)$. The $X$ and $\theta$ values change for the different parabolas. For the parabola with initial conditions set by the user, the $X$ is the horizontal range which the projectile travels and $\theta$ is the initial launch angle. For the parabola with the maximum horizontal range, $X$ and $\theta$ are calculated as per Task 4. Both values are then substituted in the equation stated above and the distance travelled by both projectiles are rendered on screen along with the parabolas themselves.
+
+\subsection{Task 7}
+
+To get plots for the Range vs time graph, a maximum time of 10 seconds is set and the program iterate over $i$, incrementing it by $dt$ where $dt =$ 10 $/$ number of points, allowing the program to calculate the range at any given time. Unlike the brief, we've extended this task by considering variable launch heights too, $\therefore r = \sqrt{u^2t^2\cos^2\theta + \left(ut\sin\theta - 1/2 gt^2 +h\right)}$. Substituting $i$ for different times and $\theta$ for multiple angles, storing the plots in a vector data type and plotting them in different colours for different angles gives us the results as desired. Plotting the max/min can also be found by comparing the plots numerically can highlighting them.
+
+\noindent Task 7 also involved a toggle button to switch to the $y$ vs $x$ graph. Drawing these with cartesianProjectile in different colours with initial user inputs (excluding the angles) was very straightforward.
+
+\subsection{Task 8}
+Task 8 involves using the Verlet method to solve for the position of the projectile. It's important to note that the horizontal velocity of the projectile is constant and therefore $a_x = 0$. We update $x$ and $y$ in the following manner, $x_{n+1} = x_n + u_x  (dt)$ and $y_{n+1} = y_n + u_y(dt) -1/2 g (dt)^2$ where $dt = 0.001$, a constant. If at any point $y_n \leq 0$, then $y_n = 0$ and $u_y = -C u_y$ where C is the coefficient of restitution and the $-$ flips the direction of the velocity. Animating this involves setting the initial settings (including the coefficient of restitution) and displaying each point according to the timesteps so they are true to realtime. The code for this section is shown below:
+
+\begin{lstlisting}
+ std::vector<point> points;
+
+  float dt = 0.001;
+  float theta = launchAngle * 3.14159f / 180.f;
+
+  float velX = std::cos(theta) * launchSpeed;
+  float velY = std::sin(theta) * launchSpeed;
+
+  float posX = 0;
+  float posY = launchHeight;
+
+  int numBounces = 0;
+
+  while (numBounces <= max_bounces)
+  {
+    posX += velX * dt;
+    posY += velY * dt - 0.5f * dt * dt * strengthOfGravity;
+
+    velX = velX;
+    velY += -strengthOfGravity * dt;
+
+    if (posY < 0)
+    {
+      numBounces++;
+      posY = -0;
+      velY = -coeffRes * velY;
+    }
+
+    points.push_back({posX, posY});
+  }
+
+  drawPoints(window, points);
+\end{lstlisting}
+
+\subsection{Task 9}
+This final task was also solved using the Verlet method. We added the various parameters which change the drag coefficient, namely mass, Cross-sectional Area and air density. We then work our way up the derivatives of displacement with repect to time, i.e. we calculate positions first $x_{n+1} = x_n + u_x  (dt), y_{n+1} = y_n + u_y dt - 1/2g (dt)^2$ then velocities $u_x = u_x + a_x (dt), u_y = u_y + a_y (dt)$\footnote{Here we must update the x-velocities as drag means horizontal velocity isn't constant} and finally acceleration $a_x = \dfrac{-u_x}{u}kv^2, a_y = -g-\dfrac{u_y}{u}kv^2$. Note that $k = \dfrac{1/2 c_D \rho A}{m}$ where $c_D$ is the coefficient of drag, $\rho$ is the density of the air, $A$ is the cross sectional area of the projectile and $m$ is the mass.
+
+\noindent This was repeated except with no air resistance too to allow for comparisons to be made. With the use of a slider with integer toggles, we used switch case statements to push back the correct components for the graphs to be plot. The code for the air resistance plots is shown below:
+
+\begin{lstlisting}
+std::vector<point> points;
+
+  float k = 0.5f * dragCoeff * airDensity * crossArea * (1.f / objectMass);
+
+  float dt = 0.01;
+  float theta = launchAngle * 3.14159f / 180.f;
+
+  float velX = std::cos(theta) * launchSpeed;
+  float velY = std::sin(theta) * launchSpeed;
+  float vel = launchSpeed;
+
+  float posX = 0;
+  float posY = launchHeight;
+
+  float accX = -velX / vel * k * vel * vel;
+  float accY = -strengthOfGravity -velY / vel * k * vel * vel;
+  int dtCounter = 0;
+
+
+  while (posY >= 0)
+  {
+
+    posX += velX * dt;
+    posY += velY * dt - 0.5f * dt * dt * strengthOfGravity;
+
+    velX += accX * dt;
+    velY += accY * dt;
+
+    vel = sqrt(velX * velX + velY * velY);
+
+    accX = -(velX / vel) * k * vel * vel;
+    accY = -strengthOfGravity - (velY / vel) * k * vel * vel;
+    dtCounter ++;
+
+    switch(plotToggle){
+      case 0:
+        points.push_back({posX, posY});
+        break;
+      case 1:
+        points.push_back({dtCounter, posY});
+        break;
+      case 2:
+        points.push_back({dtCounter, velX});
+        break;
+      case 3:
+        points.push_back({dtCounter, velY});
+        break;
+      case 4:
+        points.push_back({dtCounter, vel});
+        break;
+    }
+\end{lstlisting}
 \end{document}
+

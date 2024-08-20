@@ -17,6 +17,7 @@
 \usepackage{pgfplots}
 \usepackage{listings}
 \usepackage{amsmath}
+\usepackage{amssymb}
 \DeclareMathOperator{\atantwo}{atan2}
 \usepackage{graphicx, animate}
 \graphicspath{{./images/}}
@@ -45,6 +46,9 @@ stringstyle=\color{mauve}, breaklines=true, breakatwhitespace=true, tabsize=3 }
 \begin{document}
 \maketitle
 
+\begin{abstract}
+\noindent This work presents the modeling and simulation of complex projectile motion as per the brief for BPhO Computational Challenge 2024, focusing on accurately predicting projectile trajectories under various conditions. Exploring projectile equations and the Verlet integration method, the project explores projectile motion considering factors like launch speed, launch angle, launch height, air resistance, and gravitational effects. By implementing the project in C++ and leveraging SFML and ImGUI for graphical rendering, the study effectively visualizes projectile paths, including maximum and minimum range trajectories, under diverse initial conditions. The development also includes intercontinental projectile modeling on a rotating Earth, employing advanced mathematical techniques like triangle subdivision for sphere rendering. The study provides a robust framework for simulating real-world projectile motion, with potential applications in both educational and practical engineering contexts.
+\end{abstract}
 
 \begin{multicols}{2}
 
@@ -53,8 +57,8 @@ stringstyle=\color{mauve}, breaklines=true, breakatwhitespace=true, tabsize=3 }
 % \section{Introduction}
 
 % \section{Task by task breakdown}
-%\subfile{tasks.tex}
-
+\subfile{tasks.tex}
+\newpage
 % \section{Intercontinental Projectile Modelling}
 \subfile{Extension.tex}
 

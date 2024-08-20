@@ -2,5 +2,4 @@
 
 - Click [here](https://github.com/sacreative10/BPHOComputationalChallenge/tree/ExtensionSphere) for the project containing the extension.
 - Click [here](https://github.com/sacreative10/BPHOComputationalChallenge/tree/writeup) for the LaTeX for our writeup.
-- Click [here](https://github.com/sacreative10/BPHOComputationalChallenge/blob/main/Extension.pdf) for our writeup only for our extension.
-
+- Click [here](https://github.com/sacreative10/BPHOComputationalChallenge/blob/main/BPHOWriteup.pdf) for our final edition of the writeup.
